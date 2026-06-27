@@ -36,6 +36,8 @@ export default function SettingsTab({
   onChangeDefaultSortDirection,
   fields,
   groups,
+  users = [],
+  organizations = [],
   onSave
 }) {
   return (
@@ -48,6 +50,8 @@ export default function SettingsTab({
           onChangeFilters={onChangeFilters}
           fields={fields}
           groups={groups}
+          users={users}
+          organizations={organizations}
         />
       </SettingsSection>
 

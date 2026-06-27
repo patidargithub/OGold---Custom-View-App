@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Row, Col } from '@zendeskgarden/react-grid';
-import { Field, Label, Select } from '@zendeskgarden/react-forms';
+import { Field, Label, Select, Input } from '@zendeskgarden/react-forms';
 import { Tag } from '@zendeskgarden/react-tags';
 import { Button, IconButton } from '@zendeskgarden/react-buttons';
 import { TrashIcon, PlusIcon, CloseIcon } from './Icons';
@@ -203,35 +203,126 @@ function MultiSelectDropdown({ values, options = [], onChange, placeholder }) {
         />
       </MultiValueInputContainer>
 
-      {isOpen && filteredOptions.length > 0 && (
+      {isOpen && (
         <DropdownMenu>
-          {filteredOptions.map((opt) => (
-            <DropdownMenuItem
-              key={opt.value}
-              onMouseDown={(e) => {
-                e.preventDefault();
-              }}
-              onClick={() => selectOption(opt.value)}
+          {filteredOptions.length === 0 ? (
+            <DropdownMenuItem 
+              style={{ color: '#68737d', cursor: 'default', fontStyle: 'italic' }} 
+              onMouseDown={(e) => e.preventDefault()}
             >
-              {opt.name}
+              No matches found
             </DropdownMenuItem>
-          ))}
+          ) : (
+            filteredOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+                onClick={() => selectOption(opt.value)}
+              >
+                {opt.name}
+              </DropdownMenuItem>
+            ))
+          )}
         </DropdownMenu>
       )}
     </DropdownContainer>
   );
 }
 
-export default function FilterBuilder({ filters, onChangeFilters, fields, groups }) {
+/**
+ * Autocomplete / Searchable dropdown for single field selections.
+ */
+function SearchableSingleSelect({ value, options = [], onChange, placeholder = 'Search field...' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const selectedOpt = options.find(opt => opt.value === value);
+  const displayLabel = selectedOpt ? selectedOpt.label : '';
+
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectOption = (val) => {
+    onChange(val);
+    setSearchTerm('');
+    setIsOpen(false);
+  };
+
+  return (
+    <DropdownContainer>
+      <div style={{ position: 'relative' }}>
+        <Input
+          value={isOpen ? searchTerm : displayLabel}
+          onChange={(e) => {
+            if (!isOpen) setIsOpen(true);
+            setSearchTerm(e.target.value);
+          }}
+          onFocus={() => {
+            setIsOpen(true);
+            setSearchTerm('');
+          }}
+          onBlur={() => {
+            setTimeout(() => {
+              setIsOpen(false);
+              setSearchTerm('');
+            }, 200);
+          }}
+          placeholder={placeholder}
+        />
+        <span
+          style={{
+            position: 'absolute',
+            right: '12px',
+            top: '12px',
+            pointerEvents: 'none',
+            fontSize: '9px',
+            color: '#68737d'
+          }}
+        >
+          ▼
+        </span>
+      </div>
+
+      {isOpen && (
+        <DropdownMenu>
+          {filteredOptions.length === 0 ? (
+            <DropdownMenuItem
+              style={{ color: '#68737d', cursor: 'default', fontStyle: 'italic' }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              No fields found
+            </DropdownMenuItem>
+          ) : (
+            filteredOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+                onClick={() => selectOption(opt.value)}
+                style={{ fontWeight: opt.value === value ? '600' : 'normal' }}
+              >
+                {opt.label}
+              </DropdownMenuItem>
+            ))
+          )}
+        </DropdownMenu>
+      )}
+    </DropdownContainer>
+  );
+}
+
+export default function FilterBuilder({ filters, onChangeFilters, fields, groups, users = [], organizations = [] }) {
   
   // Format fields to a standardized list of options
   const standardFieldsList = [
     { value: 'status', label: 'Status', type: 'dropdown', options: [
       { name: 'Open', value: 'open' },
       { name: 'Pending', value: 'pending' },
-      { name: 'Hold', value: 'hold' },
-      { name: 'Solved', value: 'solved' },
-      { name: 'Closed', value: 'closed' }
+      { name: 'Hold', value: 'hold' }
     ]},
     { value: 'priority', label: 'Priority', type: 'dropdown', options: [
       { name: 'Low', value: 'low' },
@@ -246,6 +337,9 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
       { name: 'Task', value: 'task' }
     ]},
     { value: 'group_id', label: 'Group', type: 'dropdown', options: groups.map(g => ({ name: g.name, value: g.id.toString() })) },
+    { value: 'assignee_id', label: 'Assignee', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
+    { value: 'requester_id', label: 'Requester', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
+    { value: 'organization_id', label: 'Organization', type: 'dropdown', options: organizations.map(o => ({ name: o.name, value: o.id.toString() })) },
     { value: 'tags', label: 'Tags', type: 'tag' },
     { value: 'created_at', label: 'Created Date', type: 'date' },
     { value: 'updated_at', label: 'Updated Date', type: 'date' }
@@ -269,7 +363,22 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
       };
     });
 
-  const allFields = [...standardFieldsList, ...customFieldsList];
+  // Combine lists and deduplicate by label to prevent duplicate filter items (e.g. Status)
+  const allFields = [];
+  const seenLabels = new Set();
+
+  standardFieldsList.forEach(field => {
+    allFields.push(field);
+    seenLabels.add(field.label.toLowerCase());
+  });
+
+  customFieldsList.forEach(field => {
+    const labelLower = field.label.toLowerCase();
+    if (!seenLabels.has(labelLower)) {
+      allFields.push(field);
+      seenLabels.add(labelLower);
+    }
+  });
 
   const getFieldInfo = (fieldValue) => {
     return allFields.find(f => f.value === fieldValue);
@@ -363,14 +472,12 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
                 <Col xs={12} sm={4}>
                   <Field>
                     <Label hidden>Field</Label>
-                    <Select
+                    <SearchableSingleSelect
                       value={filter.field}
-                      onChange={(e) => handleFilterChange(filter.id, 'field', e.target.value)}
-                    >
-                      {allFields.map(f => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </Select>
+                      options={allFields}
+                      onChange={(val) => handleFilterChange(filter.id, 'field', val)}
+                      placeholder="Search field..."
+                    />
                   </Field>
                 </Col>
 

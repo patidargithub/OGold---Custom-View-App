@@ -7,18 +7,17 @@ import styled from 'styled-components';
 import { useClient } from '../hooks/useClient';
 
 const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
   position: relative;
+  width: 100%;
 `;
 
 const ScrollableTableWrapper = styled.div`
-  overflow: auto;
-  max-height: 480px;
-  border: 1px solid #d8dcde;
-  border-radius: 4px;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  margin-bottom: 16px;
 `;
 
 const StatusTag = styled(Tag)`
