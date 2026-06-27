@@ -252,12 +252,37 @@ export default function TicketTable({
     return result;
   }, [tickets, globalSearch, sortField, sortDirection, usersCache, groupsCache, allFields]);
 
-  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  // Zendesk search API limits results to the first 1,000 records
+  const maxSearchPages = Math.ceil(1000 / pageSize);
+  const totalPages = Math.min(Math.ceil(totalCount / pageSize) || 1, maxSearchPages);
+
+  const getErrorMessage = (err) => {
+    if (!err) return '';
+    if (err.responseText) {
+      try {
+        const parsed = JSON.parse(err.responseText);
+        if (parsed.description) return parsed.description;
+        if (parsed.error) return parsed.error;
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return err.message || err.statusText || 'An unknown API error occurred.';
+  };
 
   if (error) {
+    const errorMsg = getErrorMessage(error);
+    const isSearchLimitError = errorMsg.includes('Search Response Limits') || errorMsg.includes('Search Limit');
+
     return (
-      <div style={{ padding: '24px', background: '#fff0f0', border: '1px solid #ffd3d3', borderRadius: '4px', color: '#cc3333', margin: '16px 0' }}>
-        <strong>Error retrieving tickets:</strong> {error.message || 'An unknown network error occurred.'}
+      <div style={{ padding: '20px', background: '#fff0f0', border: '1px solid #ffd3d3', borderRadius: '4px', color: '#cc3333', margin: '16px 0' }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: 600 }}>Error Retrieving Tickets</h4>
+        <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>{errorMsg}</p>
+        {isSearchLimitError && (
+          <p style={{ margin: 0, fontSize: '13px', color: '#5f6b73', borderTop: '1px dashed #ffd3d3', paddingTop: '8px' }}>
+            💡 <strong>How to view other tickets:</strong> Zendesk limits searches to the first 1,000 tickets. Go back to the <strong>Search Settings</strong> tab and add narrower search filters (for example, limiting by status, date ranges, or tags) to slice your results into smaller datasets.
+          </p>
+        )}
       </div>
     );
   }
@@ -269,6 +294,12 @@ export default function TicketTable({
           Showing {sortedAndFilteredTickets.length} of {totalCount} matching tickets
         </span>
       </TableMetaHeader>
+
+      {totalCount > 1000 && (
+        <div style={{ padding: '10px 14px', background: '#e1f5fe', border: '1px solid #0288d1', borderRadius: '4px', color: '#01579b', fontSize: '13px', marginBottom: '12px' }}>
+          ℹ️ <strong>Zendesk Search Limit:</strong> This query matches {totalCount} tickets. Zendesk only index-caches the first 1,000 results. To view other tickets, please refine your filter criteria in Search Settings.
+        </div>
+      )}
 
       <ScrollableTableWrapper>
         {loading ? (
@@ -328,7 +359,7 @@ export default function TicketTable({
           <Pagination
             totalPages={totalPages}
             currentPage={currentPage}
-            onChangePage={onChangePage}
+            onChange={onChangePage}
           />
         </TableFooter>
       )}
