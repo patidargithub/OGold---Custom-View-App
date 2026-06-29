@@ -9,11 +9,11 @@ import styled from 'styled-components';
 const AppContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   box-sizing: border-box;
   padding: 20px;
   background: #f8fafc;
-  overflow: hidden;
+  overflow-y: auto;
 `;
 
 const AppHeader = styled.div`
@@ -38,13 +38,10 @@ const StyledTabs = styled(Tabs)`
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: hidden;
 `;
 
 const StyledTabPanel = styled(TabPanel)`
   flex: 1;
-  overflow: auto;
-  height: 100%;
   padding-top: 12px;
   box-sizing: border-box;
   
@@ -101,9 +98,6 @@ export default function NavBarApp() {
   useEffect(() => {
     async function loadMetadata() {
       if (!client) return;
-
-      // Resize the app pane to be tall (850px height) to maximize space for settings and ticket tables
-      client.invoke('resize', { width: '100%', height: '850px' });
 
       try {
         setLoading(true);
