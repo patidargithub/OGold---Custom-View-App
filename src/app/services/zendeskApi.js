@@ -79,7 +79,7 @@ export async function searchTickets(client, { query, page = 1, perPage = 25, sor
  * Implements OR logic for multiple values in the same field and AND logic between fields.
  */
 export function buildSearchQuery(filters) {
-  const parts = ['type:ticket'];
+  const parts = ['type:ticket', '-status:solved', '-status:closed'];
 
   // Group filters by field to implement the proper OR / AND logic:
   // - Multiple values within the same field should be treated as OR

@@ -506,8 +506,6 @@ export default function NavBarApp() {
         {/* Settings Panel */}
         <StyledTabPanel item="settings">
           <SettingsTab
-            filters={filters}
-            onChangeFilters={setFilters}
             selectedColumns={selectedColumns}
             onChangeSelectedColumns={setSelectedColumns}
             pageSize={pageSize}
@@ -517,9 +515,6 @@ export default function NavBarApp() {
             defaultSortDirection={sortDirection}
             onChangeDefaultSortDirection={setSortDirection}
             fields={fields}
-            groups={groups}
-            users={users}
-            organizations={orgs}
             onSave={() => runTicketSearch(1)}
           />
         </StyledTabPanel>
@@ -544,6 +539,12 @@ export default function NavBarApp() {
             orgsCache={orgsCache}
             onExportCSV={handleExportCSV}
             exporting={exporting}
+            filters={filters}
+            onChangeFilters={setFilters}
+            groups={groups}
+            users={users}
+            organizations={orgs}
+            onApplyFilters={() => runTicketSearch(1)}
           />
         </StyledTabPanel>
       </StyledTabs>

@@ -2,7 +2,6 @@ import { Row, Col } from '@zendeskgarden/react-grid';
 import { Field, Label, Select } from '@zendeskgarden/react-forms';
 import { Button } from '@zendeskgarden/react-buttons';
 import styled from 'styled-components';
-import FilterBuilder from './FilterBuilder';
 import ColumnPicker from './ColumnPicker';
 
 const SettingsSection = styled.div`
@@ -24,8 +23,6 @@ const SectionHeader = styled.h2`
 `;
 
 export default function SettingsTab({
-  filters,
-  onChangeFilters,
   selectedColumns,
   onChangeSelectedColumns,
   pageSize,
@@ -35,27 +32,11 @@ export default function SettingsTab({
   defaultSortDirection,
   onChangeDefaultSortDirection,
   fields,
-  groups,
-  users = [],
-  organizations = [],
   onSave
 }) {
   return (
     <div>
-      {/* 1. Filter Builder Section */}
-      <SettingsSection>
-        <SectionHeader>Ticket Filters</SectionHeader>
-        <FilterBuilder
-          filters={filters}
-          onChangeFilters={onChangeFilters}
-          fields={fields}
-          groups={groups}
-          users={users}
-          organizations={organizations}
-        />
-      </SettingsSection>
-
-      {/* 2. Column Picker Section */}
+      {/* 1. Column Picker Section */}
       <SettingsSection>
         <SectionHeader>Table Columns</SectionHeader>
         <ColumnPicker
@@ -65,7 +46,7 @@ export default function SettingsTab({
         />
       </SettingsSection>
 
-      {/* 3. Additional Settings Section */}
+      {/* 2. Additional Settings Section */}
       <SettingsSection>
         <SectionHeader>Additional Settings</SectionHeader>
         <Row>

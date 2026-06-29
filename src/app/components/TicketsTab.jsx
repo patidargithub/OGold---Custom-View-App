@@ -3,13 +3,13 @@ import { Field, Label, Input } from '@zendeskgarden/react-forms';
 import { Button } from '@zendeskgarden/react-buttons';
 import { SearchIcon } from './Icons';
 import TicketTable from './TicketTable';
+import FilterDrawer from './FilterDrawer';
 import styled from 'styled-components';
 
 const HeaderContainer = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
   margin-bottom: 16px;
 `;
 
@@ -39,24 +39,43 @@ export default function TicketsTab({
   groupsCache,
   orgsCache,
   onExportCSV,
-  exporting
+  exporting,
+  // Added properties for filter support inside drawer
+  filters = [],
+  onChangeFilters,
+  groups = [],
+  users = [],
+  organizations = [],
+  onApplyFilters
 }) {
   const [globalSearch, setGlobalSearch] = useState('');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   return (
     <TicketsTabContainer>
-      {/* Search Input Box & Export Button */}
+      {/* Search Input Box & Export/Filters Buttons */}
       <HeaderContainer>
-        {totalCount > 0 && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Button
-            onClick={onExportCSV}
-            disabled={exporting || loading}
+            onClick={() => setIsFilterDrawerOpen(true)}
             size="medium"
             style={{ height: '40px' }}
           >
-            {exporting ? 'Exporting...' : 'Export to CSV'}
+            Filters {filters.length > 0 ? `(${filters.length})` : ''}
           </Button>
-        )}
+
+          {totalCount > 0 && (
+            <Button
+              onClick={onExportCSV}
+              disabled={exporting || loading}
+              size="medium"
+              style={{ height: '40px' }}
+            >
+              {exporting ? 'Exporting...' : 'Export to CSV'}
+            </Button>
+          )}
+        </div>
+
         <SearchWrapper>
           <Field>
             <Label hidden>Search results</Label>
@@ -93,6 +112,19 @@ export default function TicketsTab({
         groupsCache={groupsCache}
         orgsCache={orgsCache}
         globalSearch={globalSearch}
+      />
+
+      {/* Slide-out Filters Drawer Overlay */}
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        filters={filters}
+        onChangeFilters={onChangeFilters}
+        fields={allFields}
+        groups={groups}
+        users={users}
+        organizations={organizations}
+        onApply={onApplyFilters}
       />
     </TicketsTabContainer>
   );

@@ -320,6 +320,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
   // Format fields to a standardized list of options
   const standardFieldsList = [
     { value: 'status', label: 'Status', type: 'dropdown', options: [
+      { name: 'New', value: 'new' },
       { name: 'Open', value: 'open' },
       { name: 'Pending', value: 'pending' },
       { name: 'Hold', value: 'hold' }
