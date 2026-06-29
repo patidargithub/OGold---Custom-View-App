@@ -100,6 +100,9 @@ export function buildSearchQuery(filters) {
   });
 
   Object.entries(groupedFilters).forEach(([field, occurrences]) => {
+    // If the field name is "type", search using the "ticket_type" keyword in Zendesk Search API
+    const searchField = field === 'type' ? 'ticket_type' : field;
+
     occurrences.forEach(occ => {
       occ.values.forEach(val => {
         let formattedVal = val;
@@ -114,26 +117,26 @@ export function buildSearchQuery(filters) {
         switch (occ.operator) {
           case '=':
           case 'contains':
-            parts.push(`${field}:${formattedVal}`);
+            parts.push(`${searchField}:${formattedVal}`);
             break;
           case '!=':
           case 'does not contain':
-            parts.push(`-${field}:${formattedVal}`);
+            parts.push(`-${searchField}:${formattedVal}`);
             break;
           case '>':
-            parts.push(`${field}>${formattedVal}`);
+            parts.push(`${searchField}>${formattedVal}`);
             break;
           case '<':
-            parts.push(`${field}<${formattedVal}`);
+            parts.push(`${searchField}<${formattedVal}`);
             break;
           case '>=':
-            parts.push(`${field}>=${formattedVal}`);
+            parts.push(`${searchField}>=${formattedVal}`);
             break;
           case '<=':
-            parts.push(`${field}<=${formattedVal}`);
+            parts.push(`${searchField}<=${formattedVal}`);
             break;
           default:
-            parts.push(`${field}:${formattedVal}`);
+            parts.push(`${searchField}:${formattedVal}`);
         }
       });
     });

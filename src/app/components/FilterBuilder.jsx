@@ -55,10 +55,15 @@ const TagWrapper = styled(Tag)`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  max-width: 150px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
+  max-width: none !important;
+
+  /* Force Zendesk Garden inner tag label elements to display full text without truncation */
+  & > span, & * {
+    max-width: none !important;
+    text-overflow: unset !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+  }
 `;
 
 /**

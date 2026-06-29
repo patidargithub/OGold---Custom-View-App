@@ -59,6 +59,7 @@ export default function NavBarApp() {
 
   // Layout state
   const [activeTab, setActiveTab] = useState('settings');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Search parameters state
   const [filters, setFilters] = useState([]);
@@ -89,6 +90,12 @@ export default function NavBarApp() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
+  const [kpiCounts, setKpiCounts] = useState({
+    new: 0,
+    open: 0,
+    pending: 0,
+    hold: 0
+  });
 
   // Initialize and load metadata on startup
   useEffect(() => {
@@ -100,6 +107,17 @@ export default function NavBarApp() {
 
       try {
         setLoading(true);
+
+        // Fetch current user's role and restrict access to settings
+        const roleRes = await client.get('currentUser.role');
+        const userRole = roleRes['currentUser.role'];
+        const adminUser = userRole === 'admin';
+        setIsAdmin(adminUser);
+
+        // If user is not an admin, land them on tickets tab by default
+        if (!adminUser) {
+          setActiveTab('tickets');
+        }
 
         // Fetch ZAF metadata settings
         const metadata = await client.metadata();
@@ -226,13 +244,66 @@ export default function NavBarApp() {
       const apiSortBy = serverSortable.includes(activeSortField) ? activeSortField : 'created_at';
       const apiSortOrder = serverSortable.includes(activeSortField) ? activeSortDir : 'desc';
 
-      const result = await searchTickets(client, {
-        query,
-        page,
-        perPage: pageSize,
-        sortBy: apiSortBy,
-        sortOrder: apiSortOrder
+      // Determine if a status condition is specified in the filter
+      const statusFilter = filters.find(f => f.field === 'status');
+      let statusesToFetch = ['new', 'open', 'pending', 'hold'];
+      if (statusFilter && statusFilter.values && statusFilter.values.length > 0) {
+        if (statusFilter.operator === '=') {
+          statusesToFetch = statusFilter.values.map(v => v.toLowerCase());
+        } else if (statusFilter.operator === '!=') {
+          const excludedValues = statusFilter.values.map(v => v.toLowerCase());
+          statusesToFetch = ['new', 'open', 'pending', 'hold'].filter(s => !excludedValues.includes(s));
+        }
+      }
+
+      // Build a base query for KPI cards that EXCLUDES the active status filters
+      // This prevents Zendesk's OR query parser from combining counts when multiple statuses are selected
+      const kpiFilters = filters.filter(f => f.field !== 'status');
+      let baseKpiQuery = buildSearchQuery(kpiFilters);
+      if (supportField) {
+        baseKpiQuery += ` -custom_field_${supportField.id}:agent -custom_field_${supportField.id}:"ai agent" -custom_field_${supportField.id}:ai_agent`;
+      } else {
+        baseKpiQuery += ' -tags:support_type_agent -tags:support_type_ai_agent -tags:ai_agent';
+      }
+
+      // Fetch main page results and status metrics counts in parallel
+      const [result, ...kpiResults] = await Promise.all([
+        searchTickets(client, {
+          query,
+          page,
+          perPage: pageSize,
+          sortBy: apiSortBy,
+          sortOrder: apiSortOrder
+        }),
+        ...statusesToFetch.map(async (stat) => {
+          try {
+            const res = await searchTickets(client, {
+              query: `${baseKpiQuery} status:${stat}`,
+              page: 1,
+              perPage: 1,
+              sortBy: 'created_at',
+              sortOrder: 'desc'
+            });
+            return { status: stat, count: res.count };
+          } catch (e) {
+            console.error(`Failed to fetch KPI count for status ${stat}:`, e);
+            return { status: stat, count: 0 };
+          }
+        })
+      ]);
+
+      const newKpiCounts = {
+        new: 0,
+        open: 0,
+        pending: 0,
+        hold: 0
+      };
+      kpiResults.forEach(r => {
+        if (r.status in newKpiCounts) {
+          newKpiCounts[r.status] = r.count;
+        }
       });
+      setKpiCounts(newKpiCounts);
 
       // Double-layer client-side filter to verify no matching tickets are rendered
       const cleanTickets = (result.tickets || []).filter(ticket => {
@@ -571,25 +642,27 @@ export default function NavBarApp() {
 
       <StyledTabs selectedItem={activeTab} onChange={setActiveTab}>
         <TabList style={{ marginBottom: '8px', flexShrink: 0 }}>
-          <Tab item="settings">Search Settings</Tab>
+          {isAdmin && <Tab item="settings">Search Settings</Tab>}
           <Tab item="tickets">Matching Tickets ({totalCount})</Tab>
         </TabList>
 
         {/* Settings Panel */}
-        <StyledTabPanel item="settings">
-          <SettingsTab
-            selectedColumns={selectedColumns}
-            onChangeSelectedColumns={setSelectedColumns}
-            pageSize={pageSize}
-            onChangePageSize={setPageSize}
-            defaultSortField={sortField}
-            onChangeDefaultSortField={setSortField}
-            defaultSortDirection={sortDirection}
-            onChangeDefaultSortDirection={setSortDirection}
-            fields={fields}
-            onSave={handleSaveSettings}
-          />
-        </StyledTabPanel>
+        {isAdmin && (
+          <StyledTabPanel item="settings">
+            <SettingsTab
+              selectedColumns={selectedColumns}
+              onChangeSelectedColumns={setSelectedColumns}
+              pageSize={pageSize}
+              onChangePageSize={setPageSize}
+              defaultSortField={sortField}
+              onChangeDefaultSortField={setSortField}
+              defaultSortDirection={sortDirection}
+              onChangeDefaultSortDirection={setSortDirection}
+              fields={fields}
+              onSave={handleSaveSettings}
+            />
+          </StyledTabPanel>
+        )}
 
         {/* Tickets Results Panel */}
         <StyledTabPanel item="tickets">
@@ -611,6 +684,7 @@ export default function NavBarApp() {
             orgsCache={orgsCache}
             onExportCSV={handleExportCSV}
             exporting={exporting}
+            kpiCounts={kpiCounts}
             filters={filters}
             onChangeFilters={setFilters}
             groups={groups}

@@ -22,6 +22,49 @@ const TicketsTabContainer = styled.div`
   width: 100%;
 `;
 
+const KpiContainer = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+`;
+
+const KpiCard = styled.div`
+  width: 90px;
+  height: 90px;
+  background: white;
+  border: 1px solid #edf0f2;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+  border-top: 4px solid ${props => props.borderColor || '#cbd5e1'};
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const KpiValue = styled.div`
+  font-size: 20px;
+  font-weight: 700;
+  color: #2f3941;
+  margin-bottom: 2px;
+`;
+
+const KpiLabel = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  color: #68737d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
 export default function TicketsTab({
   tickets,
   totalCount,
@@ -46,10 +89,18 @@ export default function TicketsTab({
   groups = [],
   users = [],
   organizations = [],
-  onApplyFilters
+  onApplyFilters,
+  kpiCounts = { new: 0, open: 0, pending: 0, hold: 0 }
 }) {
   const [globalSearch, setGlobalSearch] = useState('');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  const statusConfig = [
+    { key: 'new', label: 'New', color: '#1f73b7' },
+    { key: 'open', label: 'Open', color: '#d93f4c' },
+    { key: 'pending', label: 'Pending', color: '#f79a3b' },
+    { key: 'hold', label: 'Hold', color: '#333333' }
+  ];
 
   return (
     <TicketsTabContainer>
@@ -93,6 +144,16 @@ export default function TicketsTab({
           </Field>
         </SearchWrapper>
       </HeaderContainer>
+
+      {/* KPI Cards Container */}
+      <KpiContainer>
+        {statusConfig.map(status => (
+          <KpiCard key={status.key} borderColor={status.color}>
+            <KpiValue>{kpiCounts[status.key] || 0}</KpiValue>
+            <KpiLabel>{status.label}</KpiLabel>
+          </KpiCard>
+        ))}
+      </KpiContainer>
 
       {/* Ticket Table */}
       <TicketTable
