@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
 import styled from 'styled-components';
@@ -94,8 +94,41 @@ export default function NavBarApp() {
   useEffect(() => {
     async function loadMetadata() {
       if (!client) return;
+
+      // Resize the app pane to be tall (850px height) to maximize space for settings and ticket tables
+      client.invoke('resize', { width: '100%', height: '850px' });
+
       try {
         setLoading(true);
+
+        // Fetch ZAF metadata settings
+        const metadata = await client.metadata();
+        const settings = metadata.settings || {};
+
+        // Load columns_config from app installation settings
+        if (settings.columns_config) {
+          const configCols = settings.columns_config.split(',').map(s => s.trim()).filter(Boolean);
+          if (configCols.length > 0) {
+            setSelectedColumns(configCols);
+          }
+        }
+
+        // Load page_size
+        if (settings.page_size) {
+          const size = parseInt(settings.page_size, 10);
+          if (!isNaN(size)) {
+            setPageSize(size);
+          }
+        }
+
+        // Load default sort field and direction
+        if (settings.default_sort_field) {
+          setSortField(settings.default_sort_field);
+        }
+        if (settings.default_sort_direction) {
+          setSortDirection(settings.default_sort_direction);
+        }
+
         // Fetch all fields
         const fetchedFields = await fetchTicketFields(client);
         setFields(fetchedFields);
@@ -268,6 +301,45 @@ export default function NavBarApp() {
       setTimeout(() => {
         runTicketSearch(1, field, newDir);
       }, 0);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    if (!client) return;
+    setLoading(true);
+
+    try {
+      // Compile settings payload to save in Zendesk Admin Center
+      const newSettings = {
+        columns_config: selectedColumns.join(','),
+        page_size: pageSize.toString(),
+        default_sort_field: sortField,
+        default_sort_direction: sortDirection
+      };
+
+      // Call Zendesk API to update app settings
+      await updateAppInstallationSettings(client, newSettings);
+
+      // Trigger success notification
+      client.trigger('notify', {
+        type: 'success',
+        text: 'App settings successfully saved and applied to all agents.'
+      });
+
+      // Re-trigger search to update table view with new page size and default sort
+      await runTicketSearch(1);
+      setActiveTab('tickets');
+    } catch (err) {
+      console.error('Failed to update app settings:', err);
+      client.trigger('notify', {
+        type: 'error',
+        text: `Failed to save settings: ${err.message || 'Admins only.'}`
+      });
+      // Re-trigger search locally anyway so the user can see changes in current tab
+      runTicketSearch(1);
+      setActiveTab('tickets');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -515,7 +587,7 @@ export default function NavBarApp() {
             defaultSortDirection={sortDirection}
             onChangeDefaultSortDirection={setSortDirection}
             fields={fields}
-            onSave={() => runTicketSearch(1)}
+            onSave={handleSaveSettings}
           />
         </StyledTabPanel>
 

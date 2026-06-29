@@ -14,6 +14,36 @@
       }
     }
   },
+  "parameters": [
+    {
+      "name": "columns_config",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": "id,subject,status,priority,created_at"
+    },
+    {
+      "name": "page_size",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": "25"
+    },
+    {
+      "name": "default_sort_field",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": "created_at"
+    },
+    {
+      "name": "default_sort_direction",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": "desc"
+    }
+  ],
   "version": "1.0",
   "frameworkVersion": "2.0"
 }

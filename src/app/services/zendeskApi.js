@@ -141,3 +141,21 @@ export function buildSearchQuery(filters) {
 
   return parts.join(' ');
 }
+
+/**
+ * Updates the app's installation settings in Zendesk Admin Center.
+ * Only works if the active user is an administrator.
+ */
+export async function updateAppInstallationSettings(client, settings) {
+  const metadata = await client.metadata();
+  const installationId = metadata.installationId;
+
+  const options = {
+    url: `/api/v2/apps/installations/${installationId}.json`,
+    type: 'PUT',
+    contentType: 'application/json',
+    data: JSON.stringify({ settings })
+  };
+
+  return await requestWithRetry(client, options);
+}
