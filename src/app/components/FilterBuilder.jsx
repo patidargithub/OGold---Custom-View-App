@@ -748,11 +748,10 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
                         <option value="false">False</option>
                       </Select>
                     ) : fieldInfo.type === 'date' ? (
-                      <TagInput
+                      <Input
                         type="date"
-                        values={filter.values}
-                        onChange={(val) => handleFilterChange(filter.id, 'values', val)}
-                        placeholder="Add Date (YYYY-MM-DD) + Enter"
+                        value={filter.values[0] || ''}
+                        onChange={(e) => handleFilterChange(filter.id, 'values', e.target.value ? [e.target.value] : [])}
                       />
                     ) : fieldInfo.type === 'number' ? (
                       <TagInput
