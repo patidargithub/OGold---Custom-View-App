@@ -210,16 +210,17 @@ export default function NavBarApp() {
   }, [client]);
 
   // Main search function
-  const runTicketSearch = async (page = 1, forceSortField = null, forceSortDir = null) => {
+  const runTicketSearch = async (page = 1, forceSortField = null, forceSortDir = null, overrideFilters = null) => {
     if (!client) return;
     setLoading(true);
     setError(null);
 
     const activeSortField = forceSortField !== null ? forceSortField : sortField;
     const activeSortDir = forceSortDir !== null ? forceSortDir : sortDirection;
+    const activeFilters = overrideFilters !== null ? overrideFilters : filters;
 
     try {
-      let query = buildSearchQuery(filters);
+      let query = buildSearchQuery(activeFilters);
 
       // Ensure ticket fields metadata is loaded to resolve the "Support Type" field ID
       let activeFields = fields;
@@ -246,7 +247,7 @@ export default function NavBarApp() {
       const apiSortOrder = serverSortable.includes(activeSortField) ? activeSortDir : 'desc';
 
       // Determine if a status condition is specified in the filter
-      const statusFilter = filters.find(f => f.field === 'status');
+      const statusFilter = activeFilters.find(f => f.field === 'status');
       let statusesToFetch = ['new', 'open', 'pending', 'hold', 'solved', 'closed'];
       if (statusFilter && statusFilter.values && statusFilter.values.length > 0) {
         if (statusFilter.operator === '=') {
@@ -259,7 +260,7 @@ export default function NavBarApp() {
 
       // Build a base query for KPI cards that EXCLUDES the active status filters
       // This prevents Zendesk's OR query parser from combining counts when multiple statuses are selected
-      const kpiFilters = filters.filter(f => f.field !== 'status');
+      const kpiFilters = activeFilters.filter(f => f.field !== 'status');
       let baseKpiQuery = buildSearchQuery(kpiFilters);
       if (supportField) {
         baseKpiQuery += ` -custom_field_${supportField.id}:agent -custom_field_${supportField.id}:"ai agent" -custom_field_${supportField.id}:ai_agent`;
@@ -694,7 +695,10 @@ export default function NavBarApp() {
             users={users}
             organizations={orgs}
             customStatuses={customStatuses}
-            onApplyFilters={() => runTicketSearch(1)}
+            onApplyFilters={(newFilters) => {
+              setFilters(newFilters);
+              runTicketSearch(1, null, null, newFilters);
+            }}
           />
         </StyledTabPanel>
       </StyledTabs>
