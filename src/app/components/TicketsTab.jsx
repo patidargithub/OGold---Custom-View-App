@@ -24,6 +24,7 @@ const TicketsTabContainer = styled.div`
 
 const KpiContainer = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
   gap: 16px;
   margin-bottom: 16px;
@@ -90,7 +91,8 @@ export default function TicketsTab({
   users = [],
   organizations = [],
   onApplyFilters,
-  kpiCounts = { new: 0, open: 0, pending: 0, hold: 0 }
+  kpiCounts = { new: 0, open: 0, pending: 0, hold: 0, solved: 0, closed: 0 },
+  customStatuses = []
 }) {
   const [globalSearch, setGlobalSearch] = useState('');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -99,7 +101,9 @@ export default function TicketsTab({
     { key: 'new', label: 'New', color: '#1f73b7' },
     { key: 'open', label: 'Open', color: '#d93f4c' },
     { key: 'pending', label: 'Pending', color: '#f79a3b' },
-    { key: 'hold', label: 'Hold', color: '#333333' }
+    { key: 'hold', label: 'Hold', color: '#333333' },
+    { key: 'solved', label: 'Solved', color: '#038153' },
+    { key: 'closed', label: 'Closed', color: '#7f8c8d' }
   ];
 
   return (
@@ -185,6 +189,7 @@ export default function TicketsTab({
         groups={groups}
         users={users}
         organizations={organizations}
+        customStatuses={customStatuses}
         onApply={onApplyFilters}
       />
     </TicketsTabContainer>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
 import styled from 'styled-components';
@@ -80,6 +80,7 @@ export default function NavBarApp() {
   const [usersCache, setUsersCache] = useState({});
   const [groupsCache, setGroupsCache] = useState({});
   const [orgsCache, setOrgsCache] = useState({});
+  const [customStatuses, setCustomStatuses] = useState([]);
 
   // Search results state
   const [tickets, setTickets] = useState([]);
@@ -91,7 +92,9 @@ export default function NavBarApp() {
     new: 0,
     open: 0,
     pending: 0,
-    hold: 0
+    hold: 0,
+    solved: 0,
+    closed: 0
   });
 
   // Initialize and load metadata on startup
@@ -191,6 +194,10 @@ export default function NavBarApp() {
         });
         setOrgsCache(oCache);
 
+        // Fetch active custom ticket statuses
+        const fetchedCustomStatuses = await fetchCustomStatuses(client);
+        setCustomStatuses(fetchedCustomStatuses);
+
       } catch (err) {
         console.error('Failed to load initial Zendesk metadata:', err);
         setError(err);
@@ -240,13 +247,13 @@ export default function NavBarApp() {
 
       // Determine if a status condition is specified in the filter
       const statusFilter = filters.find(f => f.field === 'status');
-      let statusesToFetch = ['new', 'open', 'pending', 'hold'];
+      let statusesToFetch = ['new', 'open', 'pending', 'hold', 'solved', 'closed'];
       if (statusFilter && statusFilter.values && statusFilter.values.length > 0) {
         if (statusFilter.operator === '=') {
           statusesToFetch = statusFilter.values.map(v => v.toLowerCase());
         } else if (statusFilter.operator === '!=') {
           const excludedValues = statusFilter.values.map(v => v.toLowerCase());
-          statusesToFetch = ['new', 'open', 'pending', 'hold'].filter(s => !excludedValues.includes(s));
+          statusesToFetch = ['new', 'open', 'pending', 'hold', 'solved', 'closed'].filter(s => !excludedValues.includes(s));
         }
       }
 
@@ -290,7 +297,9 @@ export default function NavBarApp() {
         new: 0,
         open: 0,
         pending: 0,
-        hold: 0
+        hold: 0,
+        solved: 0,
+        closed: 0
       };
       kpiResults.forEach(r => {
         if (r.status in newKpiCounts) {
@@ -684,6 +693,7 @@ export default function NavBarApp() {
             groups={groups}
             users={users}
             organizations={orgs}
+            customStatuses={customStatuses}
             onApplyFilters={() => runTicketSearch(1)}
           />
         </StyledTabPanel>

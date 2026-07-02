@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Row, Col } from '@zendeskgarden/react-grid';
 import { Field, Label, Select, Input } from '@zendeskgarden/react-forms';
 import { Tag } from '@zendeskgarden/react-tags';
@@ -7,18 +7,101 @@ import { TrashIcon, PlusIcon, CloseIcon } from './Icons';
 import styled from 'styled-components';
 
 const FilterRowContainer = styled.div`
-  background: ${props => props.theme.colors ? props.theme.colors.background : '#f8f9fa'};
-  border: 1px solid #d8dcde;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 12px;
+  background: white;
+  border: 1px solid #edf0f2;
+  border-left: 3px solid #1f73b7;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
   position: relative;
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  z-index: ${props => props.isActive ? '100' : '1'};
 
   &:hover {
-    border-color: #a5b2bd;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-color: #cbd5e1;
+    border-left-color: #14548a;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    transform: translateY(-1px);
   }
+
+  &:focus-within {
+    z-index: 100;
+  }
+`;
+
+const TrashIconButton = styled(IconButton)`
+  color: #94a3b8 !important;
+  transition: all 0.2s ease-in-out !important;
+
+  &:hover {
+    color: #d93f4c !important;
+    background: #fef2f2 !important;
+    transform: scale(1.08);
+  }
+`;
+const RemoveButtonWrapper = styled.div`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+`;
+const AddFilterButton = styled(Button)`
+  width: 100%;
+  border: 1px dashed #cbd5e1 !important;
+  background: white !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  height: 48px;
+  border-radius: 6px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+
+  &:hover {
+    border-color: #1f73b7 !important;
+    background: rgba(31, 115, 183, 0.04) !important;
+    color: #1f73b7 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(31, 115, 183, 0.1);
+  }
+`;
+
+const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 36px;
+  margin-bottom: 12px;
+`;
+
+const EmptyStateTitle = styled.h3`
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  max-width: 290px;
+  line-height: 1.5;
 `;
 
 const MultiValueInputContainer = styled.div`
@@ -66,6 +149,12 @@ const TagWrapper = styled(Tag)`
   }
 `;
 
+const TagContent = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 /**
  * Custom Tag-based Input Component for multi-value entry.
  */
@@ -101,13 +190,15 @@ function TagInput({ values, onChange, placeholder, type = "text" }) {
     <MultiValueInputContainer>
       {values.map((val, idx) => (
         <TagWrapper key={idx} size="large" pill>
-          <span>{val}</span>
-          <span 
-            style={{ cursor: 'pointer', display: 'inline-flex', paddingLeft: '4px' }} 
-            onClick={() => removeValue(idx)}
-          >
-            <CloseIcon />
-          </span>
+          <TagContent>
+            <span>{val}</span>
+            <span 
+              style={{ cursor: 'pointer', display: 'inline-flex' }} 
+              onClick={() => removeValue(idx)}
+            >
+              <CloseIcon />
+            </span>
+          </TagContent>
         </TagWrapper>
       ))}
       <BorderlessInput
@@ -157,9 +248,29 @@ const DropdownMenuItem = styled.li`
   }
 `;
 
-function MultiSelectDropdown({ values, options = [], onChange, placeholder }) {
+function MultiSelectDropdown({ values, options = [], onChange, placeholder, onToggle }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (onToggle) {
+      onToggle(isOpen);
+    }
+  }, [isOpen, onToggle]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const filteredOptions = options.filter(opt =>
     !values.includes(opt.value) &&
@@ -169,6 +280,9 @@ function MultiSelectDropdown({ values, options = [], onChange, placeholder }) {
   const selectOption = (optValue) => {
     onChange([...values, optValue]);
     setSearchTerm('');
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   const removeOption = (optValue) => {
@@ -180,30 +294,36 @@ function MultiSelectDropdown({ values, options = [], onChange, placeholder }) {
     return opt ? opt.name : val;
   };
 
+  const handleContainerClick = () => {
+    setIsOpen(true);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
   return (
-    <DropdownContainer>
-      <MultiValueInputContainer onClick={() => setIsOpen(true)}>
+    <DropdownContainer ref={dropdownRef}>
+      <MultiValueInputContainer onClick={handleContainerClick}>
         {values.map((val) => (
           <TagWrapper key={val} size="large" pill>
-            <span>{getOptionName(val)}</span>
-            <span
-              style={{ cursor: 'pointer', display: 'inline-flex', paddingLeft: '4px' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                removeOption(val);
-              }}
-            >
-              <CloseIcon />
-            </span>
+            <TagContent>
+              <span>{getOptionName(val)}</span>
+              <span
+                style={{ cursor: 'pointer', display: 'inline-flex' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeOption(val);
+                }}
+              >
+                <CloseIcon />
+              </span>
+            </TagContent>
           </TagWrapper>
         ))}
         <BorderlessInput
+          ref={inputRef}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => {
-            setTimeout(() => setIsOpen(false), 200);
-          }}
           placeholder={values.length === 0 ? placeholder : ''}
         />
       </MultiValueInputContainer>
@@ -239,9 +359,28 @@ function MultiSelectDropdown({ values, options = [], onChange, placeholder }) {
 /**
  * Autocomplete / Searchable dropdown for single field selections.
  */
-function SearchableSingleSelect({ value, options = [], onChange, placeholder = 'Search field...' }) {
+function SearchableSingleSelect({ value, options = [], onChange, placeholder = 'Search field...', onToggle }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (onToggle) {
+      onToggle(isOpen);
+    }
+  }, [isOpen, onToggle]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const selectedOpt = options.find(opt => opt.value === value);
   const displayLabel = selectedOpt ? selectedOpt.label : '';
@@ -257,7 +396,7 @@ function SearchableSingleSelect({ value, options = [], onChange, placeholder = '
   };
 
   return (
-    <DropdownContainer>
+    <DropdownContainer ref={dropdownRef}>
       <div style={{ position: 'relative' }}>
         <Input
           value={isOpen ? searchTerm : displayLabel}
@@ -268,12 +407,6 @@ function SearchableSingleSelect({ value, options = [], onChange, placeholder = '
           onFocus={() => {
             setIsOpen(true);
             setSearchTerm('');
-          }}
-          onBlur={() => {
-            setTimeout(() => {
-              setIsOpen(false);
-              setSearchTerm('');
-            }, 200);
           }}
           placeholder={placeholder}
         />
@@ -320,16 +453,93 @@ function SearchableSingleSelect({ value, options = [], onChange, placeholder = '
   );
 }
 
-export default function FilterBuilder({ filters, onChangeFilters, fields, groups, users = [], organizations = [] }) {
+/**
+ * Custom dropdown select component for conditions / operators.
+ */
+function CustomSelect({ value, options = [], onChange, onToggle }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (onToggle) {
+      onToggle(isOpen);
+    }
+  }, [isOpen, onToggle]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const selectedOpt = options.find(opt => opt.value === value);
+  const displayLabel = selectedOpt ? selectedOpt.label : value;
+
+  return (
+    <DropdownContainer ref={dropdownRef}>
+      <div 
+        style={{ position: 'relative', cursor: 'pointer' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <Input
+          readOnly
+          value={displayLabel}
+          style={{ cursor: 'pointer', background: 'white' }}
+        />
+        <span
+          style={{
+            position: 'absolute',
+            right: '12px',
+            top: '12px',
+            pointerEvents: 'none',
+            fontSize: '9px',
+            color: '#68737d'
+          }}
+        >
+          ▼
+        </span>
+      </div>
+
+      {isOpen && (
+        <DropdownMenu>
+          {options.map((opt) => (
+            <DropdownMenuItem
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              style={{ fontWeight: opt.value === value ? '600' : 'normal' }}
+            >
+              {opt.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenu>
+      )}
+    </DropdownContainer>
+  );
+}
+
+export default function FilterBuilder({ filters, onChangeFilters, fields, groups, users = [], organizations = [], customStatuses = [] }) {
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
   
   // Format fields to a standardized list of options
   const standardFieldsList = [
-    { value: 'status', label: 'Status', type: 'dropdown', options: [
+    { value: 'status', label: 'Status Category', type: 'dropdown', options: [
       { name: 'New', value: 'new' },
       { name: 'Open', value: 'open' },
       { name: 'Pending', value: 'pending' },
-      { name: 'Hold', value: 'hold' }
+      { name: 'Hold', value: 'hold' },
+      { name: 'Solved', value: 'solved' },
+      { name: 'Closed', value: 'closed' }
     ]},
+    { value: 'custom_status_id', label: 'Status', type: 'dropdown', options: customStatuses.map(cs => ({ name: cs.agent_label || cs.value, value: cs.id.toString() })) },
     { value: 'priority', label: 'Priority', type: 'dropdown', options: [
       { name: 'Low', value: 'low' },
       { name: 'Normal', value: 'normal' },
@@ -353,7 +563,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
 
   // Custom fields converted to standardized objects
   const customFieldsList = fields
-    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id'].includes(f.name))
+    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id'].includes(f.name))
     .map(f => {
       let fieldType = 'text';
       if (f.type === 'tagger') fieldType = 'dropdown';
@@ -449,7 +659,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
           updatedFilter.operator = ops[0]?.value || '=';
           updatedFilter.values = [];
         }
-        return updatedFilter;
+    return updatedFilter;
       }
       return f;
     });
@@ -458,60 +668,75 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
 
   return (
     <div>
-      <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: '#2f3941' }}>
-        Filter Conditions
-      </h3>
-
       {filters.length === 0 ? (
-        <div style={{ padding: '24px', border: '1px dashed #d8dcde', borderRadius: '4px', textAlign: 'center', color: '#68737d', marginBottom: '16px' }}>
-          No filters added. Tickets will be retrieved without specific constraints.
-        </div>
+        <EmptyStateContainer>
+          <EmptyStateIcon>🔍</EmptyStateIcon>
+          <EmptyStateTitle>No Filters Active</EmptyStateTitle>
+          <EmptyStateText>
+            Add search conditions below to narrow down your ticket search query.
+          </EmptyStateText>
+        </EmptyStateContainer>
       ) : (
         filters.map((filter, index) => {
           const fieldInfo = getFieldInfo(filter.field) || {};
           const operators = getOperatorsForType(fieldInfo.type);
 
           return (
-            <FilterRowContainer key={filter.id}>
-              <Row align="center" style={{ rowGap: '12px' }}>
-                {/* Field Selection */}
-                <Col xs={12} sm={4}>
+            <FilterRowContainer key={filter.id} isActive={activeDropdownId === filter.id}>
+              <RemoveButtonWrapper>
+                <TrashIconButton 
+                  onClick={() => removeFilter(filter.id)} 
+                  aria-label="Remove filter"
+                >
+                  <TrashIcon />
+                </TrashIconButton>
+              </RemoveButtonWrapper>
+
+              <Row style={{ rowGap: '12px' }}>
+                {/* 1. Field Selection (Takes full width, leaving room for top-right close button) */}
+                <Col xs={11}>
                   <Field>
-                    <Label hidden>Field</Label>
+                    <Label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Filter Field
+                    </Label>
                     <SearchableSingleSelect
                       value={filter.field}
                       options={allFields}
                       onChange={(val) => handleFilterChange(filter.id, 'field', val)}
-                      placeholder="Search field..."
+                      placeholder="Select field..."
+                      onToggle={(isOpen) => setActiveDropdownId(isOpen ? filter.id : null)}
                     />
                   </Field>
                 </Col>
 
-                {/* Operator Selection */}
-                <Col xs={12} sm={3}>
+                {/* 2. Operator Selection */}
+                <Col xs={4}>
                   <Field>
-                    <Label hidden>Operator</Label>
-                    <Select
+                    <Label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Condition
+                    </Label>
+                    <CustomSelect
                       value={filter.operator}
-                      onChange={(e) => handleFilterChange(filter.id, 'operator', e.target.value)}
-                    >
-                      {operators.map(op => (
-                        <option key={op.value} value={op.value}>{op.label}</option>
-                      ))}
-                    </Select>
+                      options={operators}
+                      onChange={(val) => handleFilterChange(filter.id, 'operator', val)}
+                      onToggle={(isOpen) => setActiveDropdownId(isOpen ? filter.id : null)}
+                    />
                   </Field>
                 </Col>
 
-                {/* Value Input */}
-                <Col xs={10} sm={4}>
+                {/* 3. Value Input */}
+                <Col xs={8}>
                   <Field>
-                    <Label hidden>Values</Label>
+                    <Label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Value
+                    </Label>
                     {fieldInfo.type === 'dropdown' ? (
                       <MultiSelectDropdown
                         values={filter.values}
                         options={fieldInfo.options}
-                        onChange={(vals) => handleFilterChange(filter.id, 'values', vals)}
+                        onChange={(val) => handleFilterChange(filter.id, 'values', val)}
                         placeholder="Search & select options..."
+                        onToggle={(isOpen) => setActiveDropdownId(isOpen ? filter.id : null)}
                       />
                     ) : fieldInfo.type === 'checkbox' ? (
                       <Select
@@ -545,26 +770,15 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
                     )}
                   </Field>
                 </Col>
-
-                {/* Remove Button */}
-                <Col xs={2} sm={1} style={{ display: 'flex', justifyContent: 'center' }}>
-                  <IconButton 
-                    onClick={() => removeFilter(filter.id)} 
-                    aria-label="Remove filter"
-                    isDanger
-                  >
-                    <TrashIcon />
-                  </IconButton>
-                </Col>
               </Row>
             </FilterRowContainer>
           );
         })
       )}
 
-      <Button onClick={addFilter} startIcon={<PlusIcon />} style={{ marginTop: '8px' }}>
+      <AddFilterButton onClick={addFilter} startIcon={<PlusIcon />}>
         Add Filter Condition
-      </Button>
+      </AddFilterButton>
     </div>
   );
 }

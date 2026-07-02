@@ -79,7 +79,7 @@ export async function searchTickets(client, { query, page = 1, perPage = 25, sor
  * Implements OR logic for multiple values in the same field and AND logic between fields.
  */
 export function buildSearchQuery(filters) {
-  const parts = ['type:ticket', '-status:solved', '-status:closed'];
+  const parts = ['type:ticket'];
 
   // Group filters by field to implement the proper OR / AND logic:
   // - Multiple values within the same field should be treated as OR
@@ -161,4 +161,21 @@ export async function updateAppInstallationSettings(client, settings) {
   };
 
   return await requestWithRetry(client, options);
+}
+
+/**
+ * Fetches active custom ticket statuses from Zendesk.
+ */
+export async function fetchCustomStatuses(client) {
+  try {
+    const res = await requestWithRetry(client, {
+      url: '/api/v2/custom_statuses.json?active=true',
+      type: 'GET',
+      dataType: 'json'
+    });
+    return res.custom_statuses || [];
+  } catch (err) {
+    console.error('Failed to fetch custom ticket statuses:', err);
+    return [];
+  }
 }
