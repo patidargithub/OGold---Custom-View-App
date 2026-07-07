@@ -13,6 +13,8 @@ const Container = styled.div`
 
 const ScrollableTableWrapper = styled.div`
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 550px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: white;
@@ -44,6 +46,41 @@ const ClickableRow = styled(Row)`
   &:hover {
     background-color: #f8f9fa;
   }
+`;
+
+const StyledHeaderCell = styled(HeaderCell)`
+  min-width: ${props => {
+    if (props.columnId === 'id') return '90px';
+    if (props.columnId === 'subject') return '300px';
+    if (props.columnId === 'created_at' || props.columnId === 'updated_at') return '180px';
+    return '160px';
+  }};
+  padding: 12px 16px !important;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f8f9fa !important;
+  box-shadow: inset 0 -1px 0 #e2e8f0;
+`;
+
+const StyledCell = styled(Cell)`
+  min-width: ${props => {
+    if (props.columnId === 'id') return '90px';
+    if (props.columnId === 'subject') return '300px';
+    if (props.columnId === 'created_at' || props.columnId === 'updated_at') return '180px';
+    return '160px';
+  }};
+  padding: 12px 16px !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+`;
+
+const StyledTable = styled(Table)`
+  width: 100% !important;
+  min-width: max-content !important;
+  table-layout: auto !important;
 `;
 
 const TableMetaHeader = styled.div`
@@ -78,7 +115,8 @@ export default function TicketTable({
   groupsCache,
   orgsCache,
   globalSearch,
-  subdomain
+  subdomain,
+  customStatuses = []
 }) {
   const client = useClient();
 
@@ -186,13 +224,22 @@ export default function TicketTable({
     // Resolve custom fields
     if (colCode.startsWith('custom_field_')) {
       const id = parseInt(colCode.replace('custom_field_', ''), 10);
+      
+      // Check if this custom field is the custom status field
+      const matchedField = allFields.find(f => f.id === id);
+      if (matchedField && matchedField.type === 'custom_status') {
+        const statusId = ticket.custom_status_id;
+        if (!statusId) return '-';
+        const matchedStatus = customStatuses.find(cs => cs.id.toString() === statusId.toString());
+        return matchedStatus ? (matchedStatus.agent_label || matchedStatus.value) : statusId.toString();
+      }
+
       const customField = (ticket.custom_fields || []).find(cf => cf.id === id);
       if (!customField || customField.value === null || customField.value === undefined) {
         return '-';
       }
 
       // Check if this custom field is a dropdown and we have labels
-      const matchedField = allFields.find(f => f.id === id);
       if (matchedField && matchedField.type === 'tagger' && matchedField.custom_field_options) {
         const option = matchedField.custom_field_options.find(opt => opt.value === customField.value);
         return option ? option.name : customField.value;
@@ -258,17 +305,28 @@ export default function TicketTable({
           valB = usersCache[b.requester_id] || '';
         } else if (sortField.startsWith('custom_field_')) {
           const id = parseInt(sortField.replace('custom_field_', ''), 10);
-          const cfA = (a.custom_fields || []).find(cf => cf.id === id);
-          const cfB = (b.custom_fields || []).find(cf => cf.id === id);
-          valA = cfA ? cfA.value : '';
-          valB = cfB ? cfB.value : '';
-
+          
+          // Check if this custom field is the custom status field
           const matchedField = allFields.find(f => f.id === id);
-          if (matchedField && matchedField.type === 'tagger' && matchedField.custom_field_options) {
-            const optA = matchedField.custom_field_options.find(opt => opt.value === valA);
-            const optB = matchedField.custom_field_options.find(opt => opt.value === valB);
-            valA = optA ? optA.name : (valA || '');
-            valB = optB ? optB.name : (valB || '');
+          if (matchedField && matchedField.type === 'custom_status') {
+            const statusIdA = a.custom_status_id;
+            const statusIdB = b.custom_status_id;
+            const matchedA = customStatuses.find(cs => cs.id.toString() === (statusIdA || '').toString());
+            const matchedB = customStatuses.find(cs => cs.id.toString() === (statusIdB || '').toString());
+            valA = matchedA ? (matchedA.agent_label || matchedA.value) : (statusIdA || '').toString();
+            valB = matchedB ? (matchedB.agent_label || matchedB.value) : (statusIdB || '').toString();
+          } else {
+            const cfA = (a.custom_fields || []).find(cf => cf.id === id);
+            const cfB = (b.custom_fields || []).find(cf => cf.id === id);
+            valA = cfA ? cfA.value : '';
+            valB = cfB ? cfB.value : '';
+
+            if (matchedField && matchedField.type === 'tagger' && matchedField.custom_field_options) {
+              const optA = matchedField.custom_field_options.find(opt => opt.value === valA);
+              const optB = matchedField.custom_field_options.find(opt => opt.value === valB);
+              valA = optA ? optA.name : (valA || '');
+              valB = optB ? optB.name : (valB || '');
+            }
           }
         }
 
@@ -293,7 +351,7 @@ export default function TicketTable({
     }
 
     return result;
-  }, [tickets, globalSearch, sortField, sortDirection, usersCache, groupsCache, allFields]);
+  }, [tickets, globalSearch, sortField, sortDirection, usersCache, groupsCache, allFields, customStatuses]);
 
   // Zendesk search API limits results to the first 1,000 records
   const maxSearchPages = Math.ceil(1000 / pageSize);
@@ -355,13 +413,14 @@ export default function TicketTable({
             No tickets match the query parameters.
           </div>
         ) : (
-          <Table size="medium">
-            <Head style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#f8f9fa' }}>
+          <StyledTable size="medium">
+            <Head>
               <HeaderRow>
                 {selectedColumns.map(col => {
                   return (
-                    <HeaderCell 
+                    <StyledHeaderCell 
                       key={col}
+                      columnId={col}
                       onClick={() => onSort(col)}
                       style={{ cursor: 'pointer', userSelect: 'none' }}
                     >
@@ -373,7 +432,7 @@ export default function TicketTable({
                           </span>
                         )}
                       </div>
-                    </HeaderCell>
+                    </StyledHeaderCell>
                   );
                 })}
               </HeaderRow>
@@ -383,14 +442,14 @@ export default function TicketTable({
               {sortedAndFilteredTickets.map(ticket => (
                 <ClickableRow key={ticket.id} onClick={() => handleRowClick(ticket.id)}>
                   {selectedColumns.map(col => (
-                    <Cell key={col}>
+                    <StyledCell key={col} columnId={col}>
                       {renderCellContent(ticket, col)}
-                    </Cell>
+                    </StyledCell>
                   ))}
                 </ClickableRow>
               ))}
             </Body>
-          </Table>
+          </StyledTable>
         )}
       </ScrollableTableWrapper>
 

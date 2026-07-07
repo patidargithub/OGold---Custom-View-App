@@ -181,6 +181,7 @@ export default function TicketsTab({
         orgsCache={orgsCache}
         globalSearch={globalSearch}
         subdomain={subdomain}
+        customStatuses={customStatuses}
       />
 
       {/* Slide-out Filters Drawer Overlay */}

@@ -100,10 +100,16 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
     { value: 'updated_at', label: 'Updated' }
   ];
 
-  const customFields = fields.map(f => ({
-    value: `custom_field_${f.id}`,
-    label: f.title || f.raw_title || `Custom Field ${f.id}`
-  }));
+  const customFields = fields
+    .filter(f => {
+      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization'];
+      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'];
+      return !typeExclusions.includes(f.type) && !nameExclusions.includes(f.name);
+    })
+    .map(f => ({
+      value: `custom_field_${f.id}`,
+      label: f.title || f.raw_title || `Custom Field ${f.id}`
+    }));
 
   const allColumns = [...standardFields, ...customFields];
 

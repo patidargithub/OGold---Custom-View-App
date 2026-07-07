@@ -570,7 +570,11 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
 
   // Custom fields converted to standardized objects
   const customFieldsList = fields
-    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'].includes(f.name))
+    .filter(f => {
+      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization'];
+      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'];
+      return !typeExclusions.includes(f.type) && !nameExclusions.includes(f.name);
+    })
     .map(f => {
       let fieldType = 'text';
       if (f.type === 'tagger') fieldType = 'dropdown';
