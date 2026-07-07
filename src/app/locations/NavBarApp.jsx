@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
 import styled from 'styled-components';
@@ -81,6 +81,7 @@ export default function NavBarApp() {
   const [groupsCache, setGroupsCache] = useState({});
   const [orgsCache, setOrgsCache] = useState({});
   const [customStatuses, setCustomStatuses] = useState([]);
+  const [brands, setBrands] = useState([]);
 
   // Search results state
   const [tickets, setTickets] = useState([]);
@@ -88,6 +89,7 @@ export default function NavBarApp() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
+  const [subdomain, setSubdomain] = useState('');
   const [kpiCounts, setKpiCounts] = useState({
     new: 0,
     open: 0,
@@ -119,6 +121,12 @@ export default function NavBarApp() {
         // Fetch ZAF metadata settings
         const metadata = await client.metadata();
         const settings = metadata.settings || {};
+
+        // Fetch client context to resolve account subdomain
+        const context = await client.context();
+        if (context && context.account) {
+          setSubdomain(context.account.subdomain);
+        }
 
         // Load columns_config from app installation settings
         if (settings.columns_config) {
@@ -198,6 +206,10 @@ export default function NavBarApp() {
         const fetchedCustomStatuses = await fetchCustomStatuses(client);
         setCustomStatuses(fetchedCustomStatuses);
 
+        // Fetch brands
+        const fetchedBrands = await fetchBrands(client);
+        setBrands(fetchedBrands);
+
       } catch (err) {
         console.error('Failed to load initial Zendesk metadata:', err);
         setError(err);
@@ -241,7 +253,7 @@ export default function NavBarApp() {
         // Fallback tag exclusions
         query += ' -tags:support_type_agent -tags:support_type_ai_agent -tags:ai_agent';
       }
-      
+
       const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
       const apiSortBy = serverSortable.includes(activeSortField) ? activeSortField : 'created_at';
       const apiSortOrder = serverSortable.includes(activeSortField) ? activeSortDir : 'desc';
@@ -367,7 +379,7 @@ export default function NavBarApp() {
     const newDir = (sortField === field && sortDirection === 'desc') ? 'asc' : 'desc';
     setSortField(field);
     setSortDirection(newDir);
-    
+
     // Update state and immediately re-trigger search with new sorting
     // We only trigger API search if the sort field is server-sortable.
     // If it is not server-sortable, client-side sorting in TicketTable will instantly kick in.
@@ -445,7 +457,7 @@ export default function NavBarApp() {
 
       let allExportTickets = [];
       const totalPagesToFetch = Math.min(10, Math.ceil(totalCount / 100)); // Cap to Zendesk's 1,000 records search limit
-      
+
       const newUsers = { ...usersCache };
       const newGroups = { ...groupsCache };
       const newOrgs = { ...orgsCache };
@@ -647,7 +659,7 @@ export default function NavBarApp() {
       <StyledTabs selectedItem={activeTab} onChange={setActiveTab}>
         <TabList style={{ marginBottom: '8px', flexShrink: 0 }}>
           {isAdmin && <Tab item="settings">Search Settings</Tab>}
-          <Tab item="tickets">Matching Tickets ({totalCount})</Tab>
+          <Tab item="tickets">Tickets ({totalCount})</Tab>
         </TabList>
 
         {/* Settings Panel */}
@@ -695,6 +707,8 @@ export default function NavBarApp() {
             users={users}
             organizations={orgs}
             customStatuses={customStatuses}
+            brands={brands}
+            subdomain={subdomain}
             onApplyFilters={(newFilters) => {
               setFilters(newFilters);
               runTicketSearch(1, null, null, newFilters);

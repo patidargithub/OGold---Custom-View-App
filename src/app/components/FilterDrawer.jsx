@@ -156,7 +156,8 @@ export default function FilterDrawer({
   users,
   organizations,
   onApply,
-  customStatuses = []
+  customStatuses = [],
+  brands = []
 }) {
   const [validationError, setValidationError] = useState(null);
   const [localFilters, setLocalFilters] = useState([]);
@@ -231,6 +232,7 @@ export default function FilterDrawer({
             users={users}
             organizations={organizations}
             customStatuses={customStatuses}
+            brands={brands}
           />
         </DrawerBody>
         

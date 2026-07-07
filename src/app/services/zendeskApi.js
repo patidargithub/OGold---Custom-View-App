@@ -179,3 +179,20 @@ export async function fetchCustomStatuses(client) {
     return [];
   }
 }
+
+/**
+ * Fetches active brands from Zendesk.
+ */
+export async function fetchBrands(client) {
+  try {
+    const res = await requestWithRetry(client, {
+      url: '/api/v2/brands.json?active=true',
+      type: 'GET',
+      dataType: 'json'
+    });
+    return res.brands || [];
+  } catch (err) {
+    console.error('Failed to fetch Zendesk brands:', err);
+    return [];
+  }
+}

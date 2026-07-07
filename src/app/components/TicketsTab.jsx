@@ -92,7 +92,9 @@ export default function TicketsTab({
   organizations = [],
   onApplyFilters,
   kpiCounts = { new: 0, open: 0, pending: 0, hold: 0, solved: 0, closed: 0 },
-  customStatuses = []
+  customStatuses = [],
+  brands = [],
+  subdomain
 }) {
   const [globalSearch, setGlobalSearch] = useState('');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -178,6 +180,7 @@ export default function TicketsTab({
         groupsCache={groupsCache}
         orgsCache={orgsCache}
         globalSearch={globalSearch}
+        subdomain={subdomain}
       />
 
       {/* Slide-out Filters Drawer Overlay */}
@@ -191,6 +194,7 @@ export default function TicketsTab({
         users={users}
         organizations={organizations}
         customStatuses={customStatuses}
+        brands={brands}
         onApply={onApplyFilters}
       />
     </TicketsTabContainer>

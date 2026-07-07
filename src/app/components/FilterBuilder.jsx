@@ -526,7 +526,7 @@ function CustomSelect({ value, options = [], onChange, onToggle }) {
   );
 }
 
-export default function FilterBuilder({ filters, onChangeFilters, fields, groups, users = [], organizations = [], customStatuses = [] }) {
+export default function FilterBuilder({ filters, onChangeFilters, fields, groups, users = [], organizations = [], customStatuses = [], brands = [] }) {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   
   // Format fields to a standardized list of options
@@ -558,6 +558,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
       { name: 'Offered', value: 'offered' },
       { name: 'Unoffered', value: 'unoffered' }
     ]},
+    { value: 'brand', label: 'Brand', type: 'dropdown', options: brands.map(b => ({ name: b.name, value: b.subdomain || b.name })) },
     { value: 'group_id', label: 'Group', type: 'dropdown', options: groups.map(g => ({ name: g.name, value: g.id.toString() })) },
     { value: 'assignee_id', label: 'Assignee', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
     { value: 'requester_id', label: 'Requester', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
@@ -569,7 +570,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
 
   // Custom fields converted to standardized objects
   const customFieldsList = fields
-    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id', 'satisfaction'].includes(f.name))
+    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'].includes(f.name))
     .map(f => {
       let fieldType = 'text';
       if (f.type === 'tagger') fieldType = 'dropdown';

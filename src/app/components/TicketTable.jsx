@@ -77,7 +77,8 @@ export default function TicketTable({
   usersCache,
   groupsCache,
   orgsCache,
-  globalSearch
+  globalSearch,
+  subdomain
 }) {
   const client = useClient();
 
@@ -113,8 +114,39 @@ export default function TicketTable({
   const renderCellContent = (ticket, colCode) => {
     const val = ticket[colCode];
 
-    if (colCode === 'id') return `#${ticket.id}`;
-    if (colCode === 'subject') return ticket.subject || '(No Subject)';
+    if (colCode === 'id') {
+      const ticketUrl = subdomain ? `https://${subdomain}.zendesk.com/agent/tickets/${ticket.id}` : '#';
+      return (
+        <a 
+          href={ticketUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{ color: '#1f73b7', fontWeight: 600, textDecoration: 'none' }}
+          onMouseEnter={(e) => { e.target.style.textDecoration = 'underline'; }}
+          onMouseLeave={(e) => { e.target.style.textDecoration = 'none'; }}
+        >
+          #{ticket.id}
+        </a>
+      );
+    }
+    
+    if (colCode === 'subject') {
+      const ticketUrl = subdomain ? `https://${subdomain}.zendesk.com/agent/tickets/${ticket.id}` : '#';
+      return (
+        <a 
+          href={ticketUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{ color: '#2f3941', textDecoration: 'none' }}
+          onMouseEnter={(e) => { e.target.style.textDecoration = 'underline'; }}
+          onMouseLeave={(e) => { e.target.style.textDecoration = 'none'; }}
+        >
+          {ticket.subject || '(No Subject)'}
+        </a>
+      );
+    }
     
     if (colCode === 'status') {
       return <StatusTag status={ticket.status}>{ticket.status}</StatusTag>;
