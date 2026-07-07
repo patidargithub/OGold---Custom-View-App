@@ -231,7 +231,11 @@ export default function TicketTable({
         const statusId = ticket.custom_status_id;
         if (!statusId) return '-';
         const matchedStatus = customStatuses.find(cs => cs.id.toString() === statusId.toString());
-        return matchedStatus ? (matchedStatus.agent_label || matchedStatus.value) : statusId.toString();
+        if (matchedStatus) {
+          const label = matchedStatus.agent_label || matchedStatus.value;
+          return <StatusTag status={matchedStatus.status_category}>{label}</StatusTag>;
+        }
+        return statusId.toString();
       }
 
       const customField = (ticket.custom_fields || []).find(cf => cf.id === id);
