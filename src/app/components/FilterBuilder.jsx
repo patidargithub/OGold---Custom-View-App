@@ -552,6 +552,12 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
       { name: 'Problem', value: 'problem' },
       { name: 'Task', value: 'task' }
     ]},
+    { value: 'satisfaction', label: 'Satisfaction', type: 'dropdown', options: [
+      { name: 'Good', value: 'good' },
+      { name: 'Bad', value: 'bad' },
+      { name: 'Offered', value: 'offered' },
+      { name: 'Unoffered', value: 'unoffered' }
+    ]},
     { value: 'group_id', label: 'Group', type: 'dropdown', options: groups.map(g => ({ name: g.name, value: g.id.toString() })) },
     { value: 'assignee_id', label: 'Assignee', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
     { value: 'requester_id', label: 'Requester', type: 'dropdown', options: users.map(u => ({ name: u.name, value: u.id.toString() })) },
@@ -563,7 +569,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
 
   // Custom fields converted to standardized objects
   const customFieldsList = fields
-    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id'].includes(f.name))
+    .filter(f => !['subject', 'description', 'status', 'priority', 'type', 'group_id', 'assignee_id', 'requester_id', 'custom_status_id', 'status_id', 'satisfaction'].includes(f.name))
     .map(f => {
       let fieldType = 'text';
       if (f.type === 'tagger') fieldType = 'dropdown';

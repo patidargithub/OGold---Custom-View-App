@@ -94,6 +94,7 @@ export default function TicketTable({
     if (value === 'status') return 'Status';
     if (value === 'priority') return 'Priority';
     if (value === 'type') return 'Type';
+    if (value === 'satisfaction') return 'Satisfaction';
     if (value === 'group_id') return 'Group';
     if (value === 'assignee_id') return 'Assignee';
     if (value === 'requester_id') return 'Requester';
@@ -121,6 +122,14 @@ export default function TicketTable({
 
     if (colCode === 'priority') return ticket.priority ? (ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)) : '-';
     if (colCode === 'type') return ticket.type ? (ticket.type.charAt(0).toUpperCase() + ticket.type.slice(1)) : '-';
+
+    if (colCode === 'satisfaction') {
+      const rating = ticket.satisfaction_rating;
+      if (!rating || !rating.score || rating.score === 'unoffered') {
+        return '-';
+      }
+      return rating.score.charAt(0).toUpperCase() + rating.score.slice(1);
+    }
 
     if (colCode === 'group_id') {
       return groupsCache[ticket.group_id] || ticket.group_id || '-';
@@ -206,6 +215,9 @@ export default function TicketTable({
         if (sortField === 'group_id') {
           valA = groupsCache[a.group_id] || '';
           valB = groupsCache[b.group_id] || '';
+        } else if (sortField === 'satisfaction') {
+          valA = a.satisfaction_rating?.score || '';
+          valB = b.satisfaction_rating?.score || '';
         } else if (sortField === 'assignee_id') {
           valA = usersCache[a.assignee_id] || '';
           valB = usersCache[b.assignee_id] || '';

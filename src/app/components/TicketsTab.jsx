@@ -98,6 +98,7 @@ export default function TicketsTab({
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const statusConfig = [
+    { key: 'total', label: 'Total', color: '#1f73b7', isTotal: true },
     { key: 'new', label: 'New', color: '#1f73b7' },
     { key: 'open', label: 'Open', color: '#d93f4c' },
     { key: 'pending', label: 'Pending', color: '#f79a3b' },
@@ -153,7 +154,7 @@ export default function TicketsTab({
       <KpiContainer>
         {statusConfig.map(status => (
           <KpiCard key={status.key} borderColor={status.color}>
-            <KpiValue>{kpiCounts[status.key] || 0}</KpiValue>
+            <KpiValue>{status.isTotal ? totalCount : (kpiCounts[status.key] || 0)}</KpiValue>
             <KpiLabel>{status.label}</KpiLabel>
           </KpiCard>
         ))}
