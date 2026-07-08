@@ -93,6 +93,7 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
     { value: 'priority', label: 'Priority' },
     { value: 'type', label: 'Type' },
     { value: 'satisfaction', label: 'Satisfaction' },
+    { value: 'support_type', label: 'Support Type' },
     { value: 'group_id', label: 'Group' },
     { value: 'assignee_id', label: 'Assignee' },
     { value: 'requester_id', label: 'Requester' },
@@ -102,8 +103,8 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
 
   const customFields = fields
     .filter(f => {
-      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization'];
-      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'];
+      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization', 'support_type'];
+      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand', 'support_type'];
       return !typeExclusions.includes(f.type) && !nameExclusions.includes(f.name);
     })
     .map(f => ({

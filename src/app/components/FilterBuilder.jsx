@@ -572,8 +572,8 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
   // Custom fields converted to standardized objects
   const customFieldsList = fields
     .filter(f => {
-      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization'];
-      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand'];
+      const typeExclusions = ['subject', 'description', 'status', 'priority', 'tickettype', 'satisfaction', 'brand', 'group', 'assignee', 'requester', 'organization', 'support_type'];
+      const nameExclusions = ['subject', 'description', 'status', 'priority', 'type', 'tickettype', 'group', 'group_id', 'assignee', 'assignee_id', 'requester', 'requester_id', 'organization', 'organization_id', 'custom_status_id', 'status_id', 'satisfaction', 'brand', 'support_type'];
       return !typeExclusions.includes(f.type) && !nameExclusions.includes(f.name);
     })
     .map(f => {

@@ -134,6 +134,7 @@ export default function TicketTable({
     if (value === 'priority') return 'Priority';
     if (value === 'type') return 'Type';
     if (value === 'satisfaction') return 'Satisfaction';
+    if (value === 'support_type') return 'Support Type';
     if (value === 'group_id') return 'Group';
     if (value === 'assignee_id') return 'Assignee';
     if (value === 'requester_id') return 'Requester';
@@ -199,6 +200,11 @@ export default function TicketTable({
         return '-';
       }
       return rating.score.charAt(0).toUpperCase() + rating.score.slice(1);
+    }
+
+    if (colCode === 'support_type') {
+      if (!ticket.support_type) return '-';
+      return ticket.support_type === 'ai_agent' ? 'AI Agent' : (ticket.support_type.charAt(0).toUpperCase() + ticket.support_type.slice(1));
     }
 
     if (colCode === 'group_id') {
@@ -305,6 +311,9 @@ export default function TicketTable({
         } else if (sortField === 'satisfaction') {
           valA = a.satisfaction_rating?.score || '';
           valB = b.satisfaction_rating?.score || '';
+        } else if (sortField === 'support_type') {
+          valA = a.support_type || '';
+          valB = b.support_type || '';
         } else if (sortField === 'assignee_id') {
           valA = usersCache[a.assignee_id] || '';
           valB = usersCache[b.assignee_id] || '';
@@ -329,11 +338,17 @@ export default function TicketTable({
             valA = cfA ? cfA.value : '';
             valB = cfB ? cfB.value : '';
 
-            if (matchedField && matchedField.type === 'tagger' && matchedField.custom_field_options) {
-              const optA = matchedField.custom_field_options.find(opt => opt.value === valA);
-              const optB = matchedField.custom_field_options.find(opt => opt.value === valB);
-              valA = optA ? optA.name : (valA || '');
-              valB = optB ? optB.name : (valB || '');
+            if (matchedField && (matchedField.type === 'tagger' || matchedField.type === 'multiselect') && matchedField.custom_field_options) {
+              const resolveLabel = (val) => {
+                if (!val) return '';
+                const vals = Array.isArray(val) ? val : [val];
+                return vals.map(v => {
+                  const opt = matchedField.custom_field_options.find(o => o.value === v);
+                  return opt ? opt.name : v;
+                }).join(', ');
+              };
+              valA = resolveLabel(valA);
+              valB = resolveLabel(valB);
             }
           }
         }

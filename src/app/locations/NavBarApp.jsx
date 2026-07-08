@@ -245,14 +245,8 @@ export default function NavBarApp() {
         }
       }
 
-      // Exclude tickets with "support type is agent" or "support type is ai agent" at the query level
-      const supportField = activeFields.find(f => f.title && f.title.toLowerCase() === 'support type');
-      if (supportField) {
-        query += ` -custom_field_${supportField.id}:agent -custom_field_${supportField.id}:"ai agent" -custom_field_${supportField.id}:ai_agent`;
-      } else {
-        // Fallback tag exclusions
-        query += ' -tags:support_type_agent -tags:support_type_ai_agent -tags:ai_agent';
-      }
+      // Exclude tickets with "support type is ai agent" at the query level
+      query += ' -support_type:ai_agent';
 
       const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
       const apiSortBy = serverSortable.includes(activeSortField) ? activeSortField : 'created_at';
@@ -274,11 +268,7 @@ export default function NavBarApp() {
       // This prevents Zendesk's OR query parser from combining counts when multiple statuses are selected
       const kpiFilters = activeFilters.filter(f => f.field !== 'status');
       let baseKpiQuery = buildSearchQuery(kpiFilters);
-      if (supportField) {
-        baseKpiQuery += ` -custom_field_${supportField.id}:agent -custom_field_${supportField.id}:"ai agent" -custom_field_${supportField.id}:ai_agent`;
-      } else {
-        baseKpiQuery += ' -tags:support_type_agent -tags:support_type_ai_agent -tags:ai_agent';
-      }
+      baseKpiQuery += ' -support_type:ai_agent';
 
       // Fetch main page results and status metrics counts in parallel
       const [result, ...kpiResults] = await Promise.all([
@@ -323,17 +313,11 @@ export default function NavBarApp() {
 
       // Double-layer client-side filter to verify no matching tickets are rendered
       const cleanTickets = (result.tickets || []).filter(ticket => {
-        if (supportField) {
-          const customField = (ticket.custom_fields || []).find(cf => cf.id === supportField.id);
-          if (customField) {
-            const val = (customField.value || '').toString().toLowerCase();
-            if (val === 'agent' || val === 'ai agent' || val === 'ai_agent' || val === 'support_type_agent' || val === 'support_type_ai_agent') {
-              return false;
-            }
-          }
+        if (ticket.support_type === 'ai_agent') {
+          return false;
         }
         const tags = ticket.tags || [];
-        const hasAgentTag = tags.some(tag => ['support_type_agent', 'support_type_ai_agent', 'ai_agent'].includes(tag.toLowerCase()));
+        const hasAgentTag = tags.some(tag => ['support_type_ai_agent', 'ai_agent'].includes(tag.toLowerCase()));
         if (hasAgentTag) {
           return false;
         }
