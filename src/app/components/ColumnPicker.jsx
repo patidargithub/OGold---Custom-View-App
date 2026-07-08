@@ -89,7 +89,7 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
   const standardFields = [
     { value: 'id', label: 'ID' },
     { value: 'subject', label: 'Subject' },
-    { value: 'status', label: 'Status' },
+    { value: 'status', label: 'Status Category' },
     { value: 'priority', label: 'Priority' },
     { value: 'type', label: 'Type' },
     { value: 'satisfaction', label: 'Satisfaction' },

@@ -539,7 +539,8 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
       { name: 'Solved', value: 'solved' },
       { name: 'Closed', value: 'closed' }
     ]},
-    { value: 'custom_status_id', label: 'Status', type: 'dropdown', options: customStatuses.map(cs => ({ name: cs.agent_label || cs.value, value: cs.id.toString() })) },
+    { value: 'custom_status_id', label: 'Ticket Status', type: 'dropdown', options: customStatuses.map(cs => ({ name: cs.agent_label || cs.value, value: cs.id.toString() })) },
+    { value: 'subject', label: 'Subject', type: 'text' },
     { value: 'priority', label: 'Priority', type: 'dropdown', options: [
       { name: 'Low', value: 'low' },
       { name: 'Normal', value: 'normal' },

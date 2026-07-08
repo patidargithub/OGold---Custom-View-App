@@ -130,7 +130,7 @@ export default function TicketTable({
   const getColLabel = (value) => {
     if (value === 'id') return 'ID';
     if (value === 'subject') return 'Subject';
-    if (value === 'status') return 'Status';
+    if (value === 'status') return 'Status Category';
     if (value === 'priority') return 'Priority';
     if (value === 'type') return 'Type';
     if (value === 'satisfaction') return 'Satisfaction';
