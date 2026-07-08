@@ -297,84 +297,8 @@ export default function TicketTable({
       });
     }
 
-    // 2. Apply client-side sorting if sorting is set on a non-server-sortable column
-    const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
-    if (sortField && !serverSortable.includes(sortField)) {
-      result = [...result].sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-
-        // Resolve names for IDs to perform lexical sorting
-        if (sortField === 'group_id') {
-          valA = groupsCache[a.group_id] || '';
-          valB = groupsCache[b.group_id] || '';
-        } else if (sortField === 'satisfaction') {
-          valA = a.satisfaction_rating?.score || '';
-          valB = b.satisfaction_rating?.score || '';
-        } else if (sortField === 'support_type') {
-          valA = a.support_type || '';
-          valB = b.support_type || '';
-        } else if (sortField === 'assignee_id') {
-          valA = usersCache[a.assignee_id] || '';
-          valB = usersCache[b.assignee_id] || '';
-        } else if (sortField === 'requester_id') {
-          valA = usersCache[a.requester_id] || '';
-          valB = usersCache[b.requester_id] || '';
-        } else if (sortField.startsWith('custom_field_')) {
-          const id = parseInt(sortField.replace('custom_field_', ''), 10);
-          
-          // Check if this custom field is the custom status field
-          const matchedField = allFields.find(f => f.id === id);
-          if (matchedField && matchedField.type === 'custom_status') {
-            const statusIdA = a.custom_status_id;
-            const statusIdB = b.custom_status_id;
-            const matchedA = customStatuses.find(cs => cs.id.toString() === (statusIdA || '').toString());
-            const matchedB = customStatuses.find(cs => cs.id.toString() === (statusIdB || '').toString());
-            valA = matchedA ? (matchedA.agent_label || matchedA.value) : (statusIdA || '').toString();
-            valB = matchedB ? (matchedB.agent_label || matchedB.value) : (statusIdB || '').toString();
-          } else {
-            const cfA = (a.custom_fields || []).find(cf => cf.id === id);
-            const cfB = (b.custom_fields || []).find(cf => cf.id === id);
-            valA = cfA ? cfA.value : '';
-            valB = cfB ? cfB.value : '';
-
-            if (matchedField && (matchedField.type === 'tagger' || matchedField.type === 'multiselect') && matchedField.custom_field_options) {
-              const resolveLabel = (val) => {
-                if (!val) return '';
-                const vals = Array.isArray(val) ? val : [val];
-                return vals.map(v => {
-                  const opt = matchedField.custom_field_options.find(o => o.value === v);
-                  return opt ? opt.name : v;
-                }).join(', ');
-              };
-              valA = resolveLabel(valA);
-              valB = resolveLabel(valB);
-            }
-          }
-        }
-
-        if (valA === undefined || valA === null) valA = '';
-        if (valB === undefined || valB === null) valB = '';
-
-        // If numerical, compare directly
-        const numA = Number(valA);
-        const numB = Number(valB);
-        if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
-          return sortDirection === 'asc' ? numA - numB : numB - numA;
-        }
-
-        // Otherwise compare lexically as lowercased string
-        const strA = valA.toString().toLowerCase();
-        const strB = valB.toString().toLowerCase();
-
-        if (strA < strB) return sortDirection === 'asc' ? -1 : 1;
-        if (strA > strB) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
     return result;
-  }, [tickets, globalSearch, sortField, sortDirection, usersCache, groupsCache, allFields, customStatuses]);
+  }, [tickets, globalSearch, groupsCache, usersCache]);
 
   // Zendesk search API limits results to the first 1,000 records
   const maxSearchPages = Math.ceil(1000 / pageSize);
@@ -440,12 +364,14 @@ export default function TicketTable({
             <Head>
               <HeaderRow>
                 {selectedColumns.map(col => {
+                  const isSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'].includes(col);
                   return (
                     <StyledHeaderCell 
                       key={col}
                       columnId={col}
                       onClick={() => onSort(col)}
-                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      style={{ cursor: isSortable ? 'pointer' : 'not-allowed', userSelect: 'none' }}
+                      title={isSortable ? `Sort by ${getColLabel(col)}` : `Sorting not available for "${getColLabel(col)}"`}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>{getColLabel(col)}</span>

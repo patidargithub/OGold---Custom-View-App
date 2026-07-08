@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands, searchTicketsCount } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
 import styled from 'styled-components';
@@ -222,7 +222,7 @@ export default function NavBarApp() {
   }, [client]);
 
   // Main search function
-  const runTicketSearch = async (page = 1, forceSortField = null, forceSortDir = null, overrideFilters = null) => {
+  const runTicketSearch = async (page = 1, forceSortField = null, forceSortDir = null, overrideFilters = null, skipFetchCounts = false) => {
     if (!client) return;
     setLoading(true);
     setError(null);
@@ -249,7 +249,10 @@ export default function NavBarApp() {
       query += ' -support_type:ai_agent';
 
       const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
-      const apiSortBy = serverSortable.includes(activeSortField) ? activeSortField : 'created_at';
+      let apiSortBy = serverSortable.includes(activeSortField) ? activeSortField : 'created_at';
+      if (apiSortBy === 'type') {
+        apiSortBy = 'ticket_type';
+      }
       const apiSortOrder = serverSortable.includes(activeSortField) ? activeSortDir : 'desc';
 
       // Determine if a status condition is specified in the filter
@@ -270,7 +273,8 @@ export default function NavBarApp() {
       let baseKpiQuery = buildSearchQuery(kpiFilters);
       baseKpiQuery += ' -support_type:ai_agent';
 
-      // Fetch main page results and status metrics counts in parallel
+      // Fetch main page results using the general search tickets API
+      // and status metrics counts in parallel using the status-specific search count API
       const [result, ...kpiResults] = await Promise.all([
         searchTickets(client, {
           query,
@@ -279,37 +283,33 @@ export default function NavBarApp() {
           sortBy: apiSortBy,
           sortOrder: apiSortOrder
         }),
-        ...statusesToFetch.map(async (stat) => {
+        ...(skipFetchCounts ? [] : statusesToFetch.map(async (stat) => {
           try {
-            const res = await searchTickets(client, {
-              query: `${baseKpiQuery} status:${stat}`,
-              page: 1,
-              perPage: 1,
-              sortBy: 'created_at',
-              sortOrder: 'desc'
-            });
-            return { status: stat, count: res.count };
+            const count = await searchTicketsCount(client, `${baseKpiQuery} status:${stat}`);
+            return { status: stat, count };
           } catch (e) {
             console.error(`Failed to fetch KPI count for status ${stat}:`, e);
             return { status: stat, count: 0 };
           }
-        })
+        }))
       ]);
 
-      const newKpiCounts = {
-        new: 0,
-        open: 0,
-        pending: 0,
-        hold: 0,
-        solved: 0,
-        closed: 0
-      };
-      kpiResults.forEach(r => {
-        if (r.status in newKpiCounts) {
-          newKpiCounts[r.status] = r.count;
-        }
-      });
-      setKpiCounts(newKpiCounts);
+      if (!skipFetchCounts) {
+        const newKpiCounts = {
+          new: 0,
+          open: 0,
+          pending: 0,
+          hold: 0,
+          solved: 0,
+          closed: 0
+        };
+        kpiResults.forEach(r => {
+          if (r.status in newKpiCounts) {
+            newKpiCounts[r.status] = r.count;
+          }
+        });
+        setKpiCounts(newKpiCounts);
+      }
 
       // Double-layer client-side filter to verify no matching tickets are rendered
       const cleanTickets = (result.tickets || []).filter(ticket => {
@@ -360,19 +360,39 @@ export default function NavBarApp() {
   };
 
   const handleSort = (field) => {
+    const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
+    if (!serverSortable.includes(field)) {
+      let label = field;
+      if (field === 'id') label = 'ID';
+      else if (field === 'subject') label = 'Subject';
+      else if (field === 'satisfaction') label = 'Satisfaction';
+      else if (field === 'support_type') label = 'Support Type';
+      else if (field === 'group_id') label = 'Group';
+      else if (field === 'assignee_id') label = 'Assignee';
+      else if (field === 'requester_id') label = 'Requester';
+      else if (field.startsWith('custom_field_')) {
+        const id = parseInt(field.replace('custom_field_', ''), 10);
+        const matched = fields.find(f => f.id === id);
+        label = matched ? matched.title : 'Custom Field';
+      }
+
+      if (client) {
+        client.trigger('notify', {
+          type: 'warning',
+          text: `Sorting is not available for the "${label}" column.`
+        });
+      }
+      return;
+    }
+
     const newDir = (sortField === field && sortDirection === 'desc') ? 'asc' : 'desc';
     setSortField(field);
     setSortDirection(newDir);
 
-    // Update state and immediately re-trigger search with new sorting
-    // We only trigger API search if the sort field is server-sortable.
-    // If it is not server-sortable, client-side sorting in TicketTable will instantly kick in.
-    const serverSortable = ['created_at', 'updated_at', 'priority', 'status', 'type'];
-    if (serverSortable.includes(field)) {
-      setTimeout(() => {
-        runTicketSearch(1, field, newDir);
-      }, 0);
-    }
+    // Call the search API and request the sorted data directly from the Zendesk database
+    setTimeout(() => {
+      runTicketSearch(1, field, newDir, null, true);
+    }, 0);
   };
 
   const handleSaveSettings = async () => {
@@ -673,7 +693,7 @@ export default function NavBarApp() {
             error={error}
             currentPage={currentPage}
             pageSize={pageSize}
-            onChangePage={(page) => runTicketSearch(page)}
+            onChangePage={(page) => runTicketSearch(page, null, null, null, true)}
             selectedColumns={selectedColumns}
             sortField={sortField}
             sortDirection={sortDirection}

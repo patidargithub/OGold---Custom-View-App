@@ -75,6 +75,23 @@ export async function searchTickets(client, { query, page = 1, perPage = 25, sor
 }
 
 /**
+ * Fetches only the count of tickets matching a query using the search count API.
+ */
+export async function searchTicketsCount(client, query) {
+  const encodedQuery = encodeURIComponent(query);
+  const url = `/api/v2/search/count.json?query=${encodedQuery}`;
+
+  const options = {
+    url,
+    type: 'GET',
+    dataType: 'json'
+  };
+
+  const response = await requestWithRetry(client, options);
+  return response.count || 0;
+}
+
+/**
  * Helper to build the Zendesk search query string from filter conditions.
  * Implements OR logic for multiple values in the same field and AND logic between fields.
  */
