@@ -244,9 +244,13 @@ export default function TicketTable({
       }
 
       // Check if this custom field is a dropdown and we have labels
-      if (matchedField && matchedField.type === 'tagger' && matchedField.custom_field_options) {
-        const option = matchedField.custom_field_options.find(opt => opt.value === customField.value);
-        return option ? option.name : customField.value;
+      if (matchedField && (matchedField.type === 'tagger' || matchedField.type === 'multiselect') && matchedField.custom_field_options) {
+        const valuesArray = Array.isArray(customField.value) ? customField.value : [customField.value];
+        const labels = valuesArray.map(val => {
+          const option = matchedField.custom_field_options.find(opt => opt.value === val);
+          return option ? option.name : val;
+        });
+        return labels.join(', ');
       }
 
       if (typeof customField.value === 'boolean') {

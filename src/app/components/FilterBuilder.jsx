@@ -578,7 +578,7 @@ export default function FilterBuilder({ filters, onChangeFilters, fields, groups
     })
     .map(f => {
       let fieldType = 'text';
-      if (f.type === 'tagger') fieldType = 'dropdown';
+      if (f.type === 'tagger' || f.type === 'multiselect') fieldType = 'dropdown';
       else if (f.type === 'checkbox') fieldType = 'checkbox';
       else if (f.type === 'date') fieldType = 'date';
       else if (f.type === 'integer' || f.type === 'decimal') fieldType = 'number';
