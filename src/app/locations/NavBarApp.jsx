@@ -55,7 +55,7 @@ export default function NavBarApp() {
   const client = useClient();
 
   // Layout state
-  const [activeTab, setActiveTab] = useState('settings');
+  const [activeTab, setActiveTab] = useState('tickets');
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Search parameters state
@@ -113,10 +113,7 @@ export default function NavBarApp() {
         const adminUser = userRole === 'admin';
         setIsAdmin(adminUser);
 
-        // If user is not an admin, land them on tickets tab by default
-        if (!adminUser) {
-          setActiveTab('tickets');
-        }
+
 
         // Fetch ZAF metadata settings
         const metadata = await client.metadata();
