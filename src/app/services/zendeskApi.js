@@ -213,3 +213,131 @@ export async function fetchBrands(client) {
     return [];
   }
 }
+
+/**
+ * Setup Custom Object definition for user filter preferences if not already present.
+ */
+export async function setupUserFilterPreferenceCustomObject(client) {
+  const objectKey = 'user_filter_preference';
+  
+  // 1. Check if the Custom Object definition exists
+  try {
+    await requestWithRetry(client, {
+      url: `/api/v2/custom_objects/${objectKey}`,
+      type: 'GET',
+      dataType: 'json'
+    });
+    return true;
+  } catch (err) {
+    if (err.status !== 404) {
+      throw err;
+    }
+  }
+
+  // 2. Create the Custom Object definition
+  const createDefOptions = {
+    url: '/api/v2/custom_objects',
+    type: 'POST',
+    dataType: 'json',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      custom_object: {
+        key: objectKey,
+        title: 'User Filter Preference',
+        title_pluralized: 'User Filter Preferences'
+      }
+    })
+  };
+
+  await requestWithRetry(client, createDefOptions);
+
+  // 3. Create the 'preferences_json' field under the custom object
+  const createFieldOptions = {
+    url: `/api/v2/custom_objects/${objectKey}/fields`,
+    type: 'POST',
+    dataType: 'json',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      custom_object_field: {
+        key: 'preferences_json',
+        type: 'text',
+        title: 'Preferences JSON',
+        description: 'Serialized preferences JSON string'
+      }
+    })
+  };
+
+  await requestWithRetry(client, createFieldOptions);
+  return true;
+}
+
+/**
+ * Retrieve a user's stored filter preference record by external ID.
+ */
+export async function fetchUserFilterPreference(client, userId) {
+  const objectKey = 'user_filter_preference';
+  const externalId = `user_${userId}`;
+
+  const searchOptions = {
+    url: `/api/v2/custom_objects/${objectKey}/records/search`,
+    type: 'POST',
+    dataType: 'json',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      filter: {
+        external_id: {
+          "$eq": externalId
+        }
+      }
+    })
+  };
+
+  const response = await requestWithRetry(client, searchOptions);
+  const records = response.custom_object_records || response.results || [];
+  return records.length > 0 ? records[0] : null;
+}
+
+/**
+ * Save (create or update) a user's filter preference record.
+ */
+export async function saveUserFilterPreference(client, userId, filters) {
+  const objectKey = 'user_filter_preference';
+  const externalId = `user_${userId}`;
+  const filtersJson = JSON.stringify(filters);
+
+  const existingRecord = await fetchUserFilterPreference(client, userId);
+
+  if (existingRecord) {
+    const updateOptions = {
+      url: `/api/v2/custom_objects/${objectKey}/records/${existingRecord.id}`,
+      type: 'PUT',
+      dataType: 'json',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        custom_object_record: {
+          custom_object_fields: {
+            preferences_json: filtersJson
+          }
+        }
+      })
+    };
+    return await requestWithRetry(client, updateOptions);
+  } else {
+    const createOptions = {
+      url: `/api/v2/custom_objects/${objectKey}/records`,
+      type: 'POST',
+      dataType: 'json',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        custom_object_record: {
+          name: `User ${userId} Filter Preference`,
+          external_id: externalId,
+          custom_object_fields: {
+            preferences_json: filtersJson
+          }
+        }
+      })
+    };
+    return await requestWithRetry(client, createOptions);
+  }
+}

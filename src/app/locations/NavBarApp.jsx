@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands, searchTicketsCount } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands, searchTicketsCount, setupUserFilterPreferenceCustomObject, fetchUserFilterPreference, saveUserFilterPreference } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
 import styled from 'styled-components';
@@ -210,6 +210,38 @@ export default function NavBarApp() {
         const fetchedBrands = await fetchBrands(client);
         setBrands(fetchedBrands);
 
+        // Ensure Custom Object setup exists (only admins can create definitions, but non-admins can run lookups)
+        try {
+          await setupUserFilterPreferenceCustomObject(client);
+        } catch (e) {
+          console.warn('Custom object definition setup bypassed or failed:', e);
+        }
+
+        // Fetch current user and restore filters
+        let restoredFilters = [];
+        try {
+          const userRes = await client.get('currentUser.id');
+          const userId = userRes['currentUser.id'];
+          if (userId) {
+            const savedRecord = await fetchUserFilterPreference(client, userId);
+            if (savedRecord && savedRecord.custom_object_fields && savedRecord.custom_object_fields.preferences_json) {
+              restoredFilters = JSON.parse(savedRecord.custom_object_fields.preferences_json);
+              console.log('Restored filters from Zendesk Custom Object:', restoredFilters);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to restore filters from Custom Object:', e);
+        }
+
+        // Apply filters state
+        if (restoredFilters.length > 0) {
+          setFilters(restoredFilters);
+          await runTicketSearch(1, null, null, restoredFilters);
+        } else {
+          // If no saved filters, run initial ticket search with empty filter conditions
+          await runTicketSearch(1);
+        }
+
       } catch (err) {
         console.error('Failed to load initial Zendesk metadata:', err);
         setError(err);
@@ -219,6 +251,7 @@ export default function NavBarApp() {
     }
 
     loadMetadata();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
 
   // Main search function
@@ -713,9 +746,19 @@ export default function NavBarApp() {
             customStatuses={customStatuses}
             brands={brands}
             subdomain={subdomain}
-            onApplyFilters={(newFilters) => {
+            onApplyFilters={async (newFilters) => {
               setFilters(newFilters);
               runTicketSearch(1, null, null, newFilters);
+
+              try {
+                const userRes = await client.get('currentUser.id');
+                const userId = userRes['currentUser.id'];
+                if (userId) {
+                  await saveUserFilterPreference(client, userId, newFilters);
+                }
+              } catch (e) {
+                console.error('Failed to save filter preferences to Custom Object:', e);
+              }
             }}
           />
         </StyledTabPanel>
