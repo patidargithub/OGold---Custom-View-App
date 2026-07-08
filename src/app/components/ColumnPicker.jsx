@@ -55,29 +55,37 @@ const MoveButton = styled.button`
   }
 `;
 
+const SelectedListContainer = styled(ListContainer)`
+  background: #f8fafc;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
 const DraggableListItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: 1px solid #edf0f2;
+  border: 1px solid ${props => props.isDragging ? '#1f73b7' : '#edf0f2'};
+  border-radius: 4px;
   font-size: 14px;
   color: #2f3941;
-  background-color: ${props => props.isDragging ? '#edf0f2' : 'white'};
-  opacity: ${props => props.isDragging ? 0.6 : 1};
+  background-color: ${props => props.isDragging ? '#eaf5fc' : 'white'};
+  opacity: ${props => props.isDragging ? 0.8 : 1};
   cursor: grab;
   user-select: none;
+  box-shadow: ${props => props.isDragging ? '0 2px 8px rgba(0, 0, 0, 0.1)' : '0 1px 2px rgba(0, 0, 0, 0.05)'};
+  transition: all 0.15s ease-in-out;
 
   &:active {
     cursor: grabbing;
   }
 
-  &:last-child {
-    border-bottom: none;
-  }
-
   &:hover {
-    background-color: #f8f9fa;
+    background-color: ${props => props.isDragging ? '#eaf5fc' : '#f8f9fa'};
+    border-color: ${props => props.isDragging ? '#1f73b7' : '#d8dcde'};
   }
 `;
 
@@ -137,18 +145,17 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e, targetIndex) => {
-    e.preventDefault();
+  const handleDragEnter = (e, targetIndex) => {
     if (draggedIndex === null || draggedIndex === targetIndex) return;
 
+    // Swap columns live in array for immediate visual feedback
     const newCols = [...selectedColumns];
-    const [draggedCol] = newCols.splice(draggedIndex, 1);
-    newCols.splice(targetIndex, 0, draggedCol);
+    const temp = newCols[draggedIndex];
+    newCols[draggedIndex] = newCols[targetIndex];
+    newCols[targetIndex] = temp;
+
     onChangeSelectedColumns(newCols);
+    setDraggedIndex(targetIndex);
   };
 
   const handleDragEnd = () => {
@@ -208,7 +215,7 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
           <ListHeader>Selected Columns (Drag to reorder)</ListHeader>
           <div style={{ height: '40px' }} /> {/* Spacer matching input height */}
           
-          <ListContainer>
+          <SelectedListContainer>
             {selectedColumns.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#68737d', fontSize: '14px' }}>
                 No columns selected. Please select at least one column.
@@ -219,8 +226,8 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
                   key={colValue}
                   draggable
                   onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={(e) => handleDragEnter(e, idx)}
                   onDragEnd={handleDragEnd}
                   isDragging={draggedIndex === idx}
                 >
@@ -243,7 +250,7 @@ export default function ColumnPicker({ selectedColumns, onChangeSelectedColumns,
                 </DraggableListItem>
               ))
             )}
-          </ListContainer>
+          </SelectedListContainer>
         </Col>
       </Row>
     </div>
