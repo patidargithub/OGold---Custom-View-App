@@ -67,6 +67,7 @@ export default function NavBarApp() {
   const [accessRoles, setAccessRoles] = useState([]);
   const [accessGroups, setAccessGroups] = useState([]);
   const [accessUsers, setAccessUsers] = useState([]);
+  const [adminRoleId, setAdminRoleId] = useState('admin');
 
   // Search parameters state
   const [filters, setFilters] = useState([]);
@@ -145,14 +146,26 @@ export default function NavBarApp() {
         const customRolesFetched = await fetchCustomRoles(client);
         setCustomRoles(customRolesFetched);
 
+        // Find system admin custom role if it exists in the fetched list
+        const systemAdminRole = customRolesFetched.find(r => 
+          r.name.toLowerCase() === 'admin' || 
+          r.name.toLowerCase() === 'administrator'
+        );
+        const resolvedAdminRoleId = systemAdminRole ? systemAdminRole.id.toString() : 'admin';
+        setAdminRoleId(resolvedAdminRoleId);
+
         // Fetch ZAF metadata settings
         const metadata = await client.metadata();
         const settings = metadata.settings || {};
 
         // Parse access control configurations from settings
         const loadedAccessRoles = settings.access_roles ? settings.access_roles.split(',').map(s => s.trim()).filter(Boolean) : [];
-        if (!loadedAccessRoles.includes('admin')) {
-          loadedAccessRoles.push('admin');
+        if (!loadedAccessRoles.includes(resolvedAdminRoleId)) {
+          loadedAccessRoles.push(resolvedAdminRoleId);
+        }
+        if (resolvedAdminRoleId !== 'admin' && loadedAccessRoles.includes('admin')) {
+          const idx = loadedAccessRoles.indexOf('admin');
+          loadedAccessRoles.splice(idx, 1);
         }
         const loadedAccessGroups = settings.access_groups ? settings.access_groups.split(',').map(s => s.trim()).filter(Boolean) : [];
         const loadedAccessUsers = settings.access_users ? settings.access_users.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -483,7 +496,7 @@ export default function NavBarApp() {
 
     try {
       // Compile settings payload to save in Zendesk Admin Center
-      const finalRoles = accessRoles.includes('admin') ? accessRoles : ['admin', ...accessRoles];
+      const finalRoles = accessRoles.includes(adminRoleId) ? accessRoles : [adminRoleId, ...accessRoles];
       const newSettings = {
         columns_config: selectedColumns.join(','),
         page_size: pageSize.toString(),
@@ -526,7 +539,7 @@ export default function NavBarApp() {
     setLoading(true);
 
     try {
-      const finalRoles = roles.includes('admin') ? roles : ['admin', ...roles];
+      const finalRoles = roles.includes(adminRoleId) ? roles : [adminRoleId, ...roles];
       const newSettings = {
         columns_config: selectedColumns.join(','),
         page_size: pageSize.toString(),
@@ -832,6 +845,7 @@ export default function NavBarApp() {
               selectedGroups={accessGroups}
               selectedUsers={accessUsers}
               onSave={handleSaveAccessSettings}
+              adminRoleId={adminRoleId}
             />
           </StyledTabPanel>
         )}

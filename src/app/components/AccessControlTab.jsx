@@ -247,7 +247,8 @@ function MultiSelectField({
   description,
   icon,
   iconBg,
-  iconColor
+  iconColor,
+  adminRoleId = 'admin'
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -279,14 +280,15 @@ function MultiSelectField({
   };
 
   const getOptionLabel = (val) => {
-    if (val === 'admin') return 'Admin';
+    if (val === adminRoleId) return 'Admin';
     const opt = options.find(o => o.id === val);
     return opt ? opt.name : val;
   };
 
   const filteredOptions = options.filter(opt =>
-    opt.id !== 'admin' &&
+    opt.id !== adminRoleId &&
     opt.name.toLowerCase() !== 'admin' &&
+    opt.name.toLowerCase() !== 'administrator' &&
     !values.includes(opt.id) &&
     opt.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -313,7 +315,7 @@ function MultiSelectField({
               <TagChip key={val} size="large" pill>
                 <TagContent>
                   <span>{getOptionLabel(val)}</span>
-                  {val !== 'admin' && (
+                  {val !== adminRoleId && (
                     <span
                       style={{ cursor: 'pointer', display: 'inline-flex' }}
                       onClick={(e) => {
@@ -400,7 +402,8 @@ export default function AccessControlTab({
   selectedRoles,
   selectedGroups,
   selectedUsers,
-  onSave
+  onSave,
+  adminRoleId = 'admin'
 }) {
   const [localRoles, setLocalRoles] = useState(selectedRoles);
   const [localGroups, setLocalGroups] = useState(selectedGroups);
@@ -452,6 +455,7 @@ export default function AccessControlTab({
             icon={<RolesIcon />}
             iconBg="#eff6ff"
             iconColor="#2563eb"
+            adminRoleId={adminRoleId}
           />
         </Col>
 
