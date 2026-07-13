@@ -151,6 +151,9 @@ export default function NavBarApp() {
 
         // Parse access control configurations from settings
         const loadedAccessRoles = settings.access_roles ? settings.access_roles.split(',').map(s => s.trim()).filter(Boolean) : [];
+        if (!loadedAccessRoles.includes('admin')) {
+          loadedAccessRoles.push('admin');
+        }
         const loadedAccessGroups = settings.access_groups ? settings.access_groups.split(',').map(s => s.trim()).filter(Boolean) : [];
         const loadedAccessUsers = settings.access_users ? settings.access_users.split(',').map(s => s.trim()).filter(Boolean) : [];
 
@@ -480,12 +483,13 @@ export default function NavBarApp() {
 
     try {
       // Compile settings payload to save in Zendesk Admin Center
+      const finalRoles = accessRoles.includes('admin') ? accessRoles : ['admin', ...accessRoles];
       const newSettings = {
         columns_config: selectedColumns.join(','),
         page_size: pageSize.toString(),
         default_sort_field: sortField,
         default_sort_direction: sortDirection,
-        access_roles: accessRoles.join(','),
+        access_roles: finalRoles.join(','),
         access_groups: accessGroups.join(','),
         access_users: accessUsers.join(',')
       };
@@ -522,19 +526,20 @@ export default function NavBarApp() {
     setLoading(true);
 
     try {
+      const finalRoles = roles.includes('admin') ? roles : ['admin', ...roles];
       const newSettings = {
         columns_config: selectedColumns.join(','),
         page_size: pageSize.toString(),
         default_sort_field: sortField,
         default_sort_direction: sortDirection,
-        access_roles: roles.join(','),
+        access_roles: finalRoles.join(','),
         access_groups: groups.join(','),
         access_users: users.join(',')
       };
 
       await updateAppInstallationSettings(client, newSettings);
 
-      setAccessRoles(roles);
+      setAccessRoles(finalRoles);
       setAccessGroups(groups);
       setAccessUsers(users);
 

@@ -279,11 +279,14 @@ function MultiSelectField({
   };
 
   const getOptionLabel = (val) => {
+    if (val === 'admin') return 'Admin';
     const opt = options.find(o => o.id === val);
     return opt ? opt.name : val;
   };
 
   const filteredOptions = options.filter(opt =>
+    opt.id !== 'admin' &&
+    opt.name.toLowerCase() !== 'admin' &&
     !values.includes(opt.id) &&
     opt.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -310,15 +313,17 @@ function MultiSelectField({
               <TagChip key={val} size="large" pill>
                 <TagContent>
                   <span>{getOptionLabel(val)}</span>
-                  <span
-                    style={{ cursor: 'pointer', display: 'inline-flex' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeItem(val);
-                    }}
-                  >
-                    <CloseIcon />
-                  </span>
+                  {val !== 'admin' && (
+                    <span
+                      style={{ cursor: 'pointer', display: 'inline-flex' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeItem(val);
+                      }}
+                    >
+                      <CloseIcon />
+                    </span>
+                  )}
                 </TagContent>
               </TagChip>
             ))}
