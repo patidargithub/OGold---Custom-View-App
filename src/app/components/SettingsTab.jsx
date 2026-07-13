@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Row, Col } from '@zendeskgarden/react-grid';
 import { Field, Label, Select } from '@zendeskgarden/react-forms';
 import { Button } from '@zendeskgarden/react-buttons';
@@ -22,6 +23,38 @@ const SectionHeader = styled.h2`
   padding-bottom: 8px;
 `;
 
+const AlertBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: ${props => props.type === 'success' ? '#edfcf2' : '#fdf2f2'};
+  border: 1px solid ${props => props.type === 'success' ? '#c8f7d5' : '#fcd2d2'};
+  border-radius: 4px;
+  color: ${props => props.type === 'success' ? '#1b7a43' : '#b81d1d'};
+  font-weight: 500;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 8px;
+`;
+
+const SuccessIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ErrorIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
 export default function SettingsTab({
   selectedColumns,
   onChangeSelectedColumns,
@@ -34,6 +67,20 @@ export default function SettingsTab({
   fields,
   onSave
 }) {
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  const handleSave = async () => {
+    setSaveStatus(null);
+    try {
+      await onSave();
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus(null), 4000);
+    } catch (e) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 4000);
+    }
+  };
+
   return (
     <div>
       {/* 1. Column Picker Section */}
@@ -100,10 +147,22 @@ export default function SettingsTab({
       </SettingsSection>
 
       {/* Save Actions */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px', paddingBottom: '24px' }}>
+        {saveStatus === 'success' && (
+          <AlertBanner type="success">
+            <SuccessIcon />
+            Search settings successfully saved.
+          </AlertBanner>
+        )}
+        {saveStatus === 'error' && (
+          <AlertBanner type="error">
+            <ErrorIcon />
+            Failed to save search settings.
+          </AlertBanner>
+        )}
         <Button 
           isPrimary 
-          onClick={onSave}
+          onClick={handleSave}
           size="large"
           style={{ width: '150px' }}
         >

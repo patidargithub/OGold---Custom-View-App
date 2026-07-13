@@ -511,6 +511,7 @@ export default function NavBarApp() {
       // Re-trigger search locally anyway so the user can see changes in current tab
       runTicketSearch(1);
       setActiveTab('tickets');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -576,6 +577,7 @@ export default function NavBarApp() {
         type: 'error',
         text: `Failed to save access settings: ${err.message || 'Admins only.'}`
       });
+      throw err;
     } finally {
       setLoading(false);
     }

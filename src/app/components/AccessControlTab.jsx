@@ -356,6 +356,38 @@ function MultiSelectField({
   );
 }
 
+const AlertBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: ${props => props.type === 'success' ? '#edfcf2' : '#fdf2f2'};
+  border: 1px solid ${props => props.type === 'success' ? '#c8f7d5' : '#fcd2d2'};
+  border-radius: 8px;
+  color: ${props => props.type === 'success' ? '#1b7a43' : '#b81d1d'};
+  font-weight: 500;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  animation: ${fadeIn} 0.3s ease-out;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 400px;
+`;
+
+const SuccessIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ErrorIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
 export default function AccessControlTab({
   roles,
   groups,
@@ -368,6 +400,7 @@ export default function AccessControlTab({
   const [localRoles, setLocalRoles] = useState(selectedRoles);
   const [localGroups, setLocalGroups] = useState(selectedGroups);
   const [localUsers, setLocalUsers] = useState(selectedUsers);
+  const [saveStatus, setSaveStatus] = useState(null);
 
   useEffect(() => {
     setLocalRoles(selectedRoles);
@@ -381,8 +414,16 @@ export default function AccessControlTab({
     setLocalUsers(selectedUsers);
   }, [selectedUsers]);
 
-  const handleSave = () => {
-    onSave(localRoles, localGroups, localUsers);
+  const handleSave = async () => {
+    setSaveStatus(null);
+    try {
+      await onSave(localRoles, localGroups, localUsers);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus(null), 4000);
+    } catch (e) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 4000);
+    }
   };
 
   return (
@@ -438,7 +479,19 @@ export default function AccessControlTab({
         </Col>
       </Row>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '24px', marginTop: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px', paddingBottom: '24px', marginTop: '12px' }}>
+        {saveStatus === 'success' && (
+          <AlertBanner type="success">
+            <SuccessIcon />
+            Access control settings successfully saved.
+          </AlertBanner>
+        )}
+        {saveStatus === 'error' && (
+          <AlertBanner type="error">
+            <ErrorIcon />
+            Failed to save access settings.
+          </AlertBanner>
+        )}
         <Button
           isPrimary
           onClick={handleSave}
