@@ -341,3 +341,21 @@ export async function saveUserFilterPreference(client, userId, filters) {
     return await requestWithRetry(client, createOptions);
   }
 }
+
+/**
+ * Fetches all custom roles from Zendesk.
+ * Only returns active ones, or all if status is not filtered.
+ */
+export async function fetchCustomRoles(client) {
+  try {
+    const res = await requestWithRetry(client, {
+      url: '/api/v2/custom_roles.json',
+      type: 'GET',
+      dataType: 'json'
+    });
+    return res.custom_roles || [];
+  } catch (err) {
+    console.error('Failed to fetch Zendesk custom roles:', err);
+    return [];
+  }
+}

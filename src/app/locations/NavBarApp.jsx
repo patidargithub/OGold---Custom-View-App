@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabList, Tab, TabPanel } from '@zendeskgarden/react-tabs';
 import { useClient } from '../hooks/useClient';
-import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands, searchTicketsCount, setupUserFilterPreferenceCustomObject, fetchUserFilterPreference, saveUserFilterPreference } from '../services/zendeskApi';
+import { fetchTicketFields, searchTickets, buildSearchQuery, requestWithRetry, updateAppInstallationSettings, fetchCustomStatuses, fetchBrands, searchTicketsCount, setupUserFilterPreferenceCustomObject, fetchUserFilterPreference, saveUserFilterPreference, fetchCustomRoles } from '../services/zendeskApi';
 import SettingsTab from '../components/SettingsTab';
 import TicketsTab from '../components/TicketsTab';
+import AccessControlTab from '../components/AccessControlTab';
 import styled from 'styled-components';
 
 const AppContainer = styled.div`
@@ -38,12 +39,14 @@ const StyledTabs = styled(Tabs)`
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: visible !important;
 `;
 
 const StyledTabPanel = styled(TabPanel)`
   flex: 1;
   padding-top: 12px;
   box-sizing: border-box;
+  overflow: visible !important;
   
   &[data-selected="true"] {
     display: flex;
@@ -57,6 +60,13 @@ export default function NavBarApp() {
   // Layout state
   const [activeTab, setActiveTab] = useState('tickets');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasSettingsAccess, setHasSettingsAccess] = useState(false);
+
+  // Access control selections state
+  const [customRoles, setCustomRoles] = useState([]);
+  const [accessRoles, setAccessRoles] = useState([]);
+  const [accessGroups, setAccessGroups] = useState([]);
+  const [accessUsers, setAccessUsers] = useState([]);
 
   // Search parameters state
   const [filters, setFilters] = useState([]);
@@ -107,17 +117,56 @@ export default function NavBarApp() {
       try {
         setLoading(true);
 
-        // Fetch current user's role and restrict access to settings
-        const roleRes = await client.get('currentUser.role');
-        const userRole = roleRes['currentUser.role'];
+        // Fetch current user properties from ZAF
+        const currentUserRes = await client.get('currentUser');
+        const currentUser = currentUserRes.currentUser || {};
+        const userId = currentUser.id;
+        const userRole = currentUser.role;
+        const userGroups = currentUser.groups || [];
         const adminUser = userRole === 'admin';
         setIsAdmin(adminUser);
 
+        // Fetch custom_role_id from REST API for custom role support
+        let customRoleId = null;
+        try {
+          const meRes = await requestWithRetry(client, {
+            url: '/api/v2/users/me.json',
+            type: 'GET',
+            dataType: 'json'
+          });
+          if (meRes && meRes.user) {
+            customRoleId = meRes.user.custom_role_id;
+          }
+        } catch (e) {
+          console.error('Failed to fetch custom_role_id:', e);
+        }
 
+        // Fetch all custom roles from Zendesk REST API
+        const customRolesFetched = await fetchCustomRoles(client);
+        setCustomRoles(customRolesFetched);
 
         // Fetch ZAF metadata settings
         const metadata = await client.metadata();
         const settings = metadata.settings || {};
+
+        // Parse access control configurations from settings
+        const loadedAccessRoles = settings.access_roles ? settings.access_roles.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const loadedAccessGroups = settings.access_groups ? settings.access_groups.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const loadedAccessUsers = settings.access_users ? settings.access_users.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        setAccessRoles(loadedAccessRoles);
+        setAccessGroups(loadedAccessGroups);
+        setAccessUsers(loadedAccessUsers);
+
+        // Access check
+        const hasAccess = 
+          adminUser || 
+          loadedAccessRoles.includes(userRole) || 
+          (customRoleId && loadedAccessRoles.includes(customRoleId.toString())) ||
+          userGroups.some(g => loadedAccessGroups.includes(g.id.toString())) ||
+          (userId && loadedAccessUsers.includes(userId.toString()));
+
+        setHasSettingsAccess(hasAccess);
 
         // Fetch client context to resolve account subdomain
         const context = await client.context();
@@ -435,7 +484,10 @@ export default function NavBarApp() {
         columns_config: selectedColumns.join(','),
         page_size: pageSize.toString(),
         default_sort_field: sortField,
-        default_sort_direction: sortDirection
+        default_sort_direction: sortDirection,
+        access_roles: accessRoles.join(','),
+        access_groups: accessGroups.join(','),
+        access_users: accessUsers.join(',')
       };
 
       // Call Zendesk API to update app settings
@@ -459,6 +511,71 @@ export default function NavBarApp() {
       // Re-trigger search locally anyway so the user can see changes in current tab
       runTicketSearch(1);
       setActiveTab('tickets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAccessSettings = async (roles, groups, users) => {
+    if (!client) return;
+    setLoading(true);
+
+    try {
+      const newSettings = {
+        columns_config: selectedColumns.join(','),
+        page_size: pageSize.toString(),
+        default_sort_field: sortField,
+        default_sort_direction: sortDirection,
+        access_roles: roles.join(','),
+        access_groups: groups.join(','),
+        access_users: users.join(',')
+      };
+
+      await updateAppInstallationSettings(client, newSettings);
+
+      setAccessRoles(roles);
+      setAccessGroups(groups);
+      setAccessUsers(users);
+
+      // Recheck access
+      const currentUserRes = await client.get('currentUser');
+      const currentUser = currentUserRes.currentUser || {};
+      const userId = currentUser.id;
+      const userRole = currentUser.role;
+      const userGroups = currentUser.groups || [];
+
+      let customRoleId = null;
+      try {
+        const meRes = await requestWithRetry(client, {
+          url: '/api/v2/users/me.json',
+          type: 'GET',
+          dataType: 'json'
+        });
+        if (meRes && meRes.user) {
+          customRoleId = meRes.user.custom_role_id;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      const hasAccess = 
+        userRole === 'admin' || 
+        roles.includes(userRole) || 
+        (customRoleId && roles.includes(customRoleId.toString())) ||
+        userGroups.some(g => groups.includes(g.id.toString())) ||
+        (userId && users.includes(userId.toString()));
+      setHasSettingsAccess(hasAccess);
+
+      client.trigger('notify', {
+        type: 'success',
+        text: 'Access control settings successfully saved.'
+      });
+    } catch (err) {
+      console.error('Failed to update access settings:', err);
+      client.trigger('notify', {
+        type: 'error',
+        text: `Failed to save access settings: ${err.message || 'Admins only.'}`
+      });
     } finally {
       setLoading(false);
     }
@@ -692,12 +809,28 @@ export default function NavBarApp() {
 
       <StyledTabs selectedItem={activeTab} onChange={setActiveTab}>
         <TabList style={{ marginBottom: '8px', flexShrink: 0 }}>
-          {isAdmin && <Tab item="settings">Search Settings</Tab>}
+          {isAdmin && <Tab item="access">Access Control</Tab>}
+          {hasSettingsAccess && <Tab item="settings">Search Settings</Tab>}
           <Tab item="tickets">Tickets ({totalCount})</Tab>
         </TabList>
 
-        {/* Settings Panel */}
+        {/* Access Control Panel */}
         {isAdmin && (
+          <StyledTabPanel item="access">
+            <AccessControlTab
+              roles={customRoles.map(r => ({ id: r.id.toString(), name: r.name }))}
+              groups={groups.map(g => ({ id: g.id.toString(), name: g.name }))}
+              users={users.map(u => ({ id: u.id.toString(), name: u.name }))}
+              selectedRoles={accessRoles}
+              selectedGroups={accessGroups}
+              selectedUsers={accessUsers}
+              onSave={handleSaveAccessSettings}
+            />
+          </StyledTabPanel>
+        )}
+
+        {/* Settings Panel */}
+        {hasSettingsAccess && (
           <StyledTabPanel item="settings">
             <SettingsTab
               selectedColumns={selectedColumns}

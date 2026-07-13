@@ -42,6 +42,27 @@
       "required": false,
       "secure": false,
       "default": "desc"
+    },
+    {
+      "name": "access_roles",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": ""
+    },
+    {
+      "name": "access_groups",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": ""
+    },
+    {
+      "name": "access_users",
+      "type": "text",
+      "required": false,
+      "secure": false,
+      "default": ""
     }
   ],
   "version": "1.0",

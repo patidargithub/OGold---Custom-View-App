@@ -8,7 +8,9 @@ const mockEN = {
   'two.one': 'the second translation for: {{fname}}',
   'two.two': 'the second translation for: {{fname}}-{{lname}}',
   'three.one.one': 'the third translation from {{name}} for {{name}} should be {{name}}',
-  four: {}
+  four: {},
+  'ticket_sidebar.title': 'Hello from Ticket Side Bar',
+  'modal.title': 'Hello from Modal'
 }
 
 describe('i18n', () => {
