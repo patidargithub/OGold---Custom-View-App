@@ -220,18 +220,33 @@ export default function NavBarApp() {
           setLastSortDirection(settings.default_sort_direction);
         }
 
-        // Fetch all fields
-        const fetchedFields = await fetchTicketFields(client);
-        setFields(fetchedFields);
+        // Fetch all independent metadata payloads in parallel
+        const [
+          fetchedFields,
+          groupsRes,
+          usersRes,
+          orgsRes,
+          fetchedCustomStatuses,
+          fetchedBrands
+        ] = await Promise.all([
+          fetchTicketFields(client),
+          requestWithRetry(client, { url: '/api/v2/groups.json', type: 'GET', dataType: 'json' }),
+          requestWithRetry(client, { url: '/api/v2/users.json?role[]=agent&role[]=admin', type: 'GET', dataType: 'json' }),
+          requestWithRetry(client, { url: '/api/v2/organizations.json', type: 'GET', dataType: 'json' }),
+          fetchCustomStatuses(client),
+          fetchBrands(client)
+        ]);
 
-        // Fetch groups to resolve IDs to names
-        const groupsRes = await requestWithRetry(client, {
-          url: '/api/v2/groups.json',
-          type: 'GET',
-          dataType: 'json'
-        });
         const fetchedGroups = groupsRes.groups || [];
+        const fetchedUsers = usersRes.users || [];
+        const fetchedOrgs = orgsRes.organizations || [];
+
+        setFields(fetchedFields);
         setGroups(fetchedGroups);
+        setUsers(fetchedUsers);
+        setOrgs(fetchedOrgs);
+        setCustomStatuses(fetchedCustomStatuses);
+        setBrands(fetchedBrands);
 
         // Build initial groups cache
         const gCache = {};
@@ -240,43 +255,17 @@ export default function NavBarApp() {
         });
         setGroupsCache(gCache);
 
-        // Fetch users (agents and admins) to resolve IDs and enable dropdown searching
-        const usersRes = await requestWithRetry(client, {
-          url: '/api/v2/users.json?role[]=agent&role[]=admin',
-          type: 'GET',
-          dataType: 'json'
-        });
-        const fetchedUsers = usersRes.users || [];
-        setUsers(fetchedUsers);
-
         const uCache = {};
         fetchedUsers.forEach(u => {
           uCache[u.id] = u.name;
         });
         setUsersCache(uCache);
 
-        // Fetch organizations
-        const orgsRes = await requestWithRetry(client, {
-          url: '/api/v2/organizations.json',
-          type: 'GET',
-          dataType: 'json'
-        });
-        const fetchedOrgs = orgsRes.organizations || [];
-        setOrgs(fetchedOrgs);
-
         const oCache = {};
         fetchedOrgs.forEach(o => {
           oCache[o.id] = o.name;
         });
         setOrgsCache(oCache);
-
-        // Fetch active custom ticket statuses
-        const fetchedCustomStatuses = await fetchCustomStatuses(client);
-        setCustomStatuses(fetchedCustomStatuses);
-
-        // Fetch brands
-        const fetchedBrands = await fetchBrands(client);
-        setBrands(fetchedBrands);
 
         // Ensure Custom Object setup exists (only admins can create definitions, but non-admins can run lookups)
         try {
