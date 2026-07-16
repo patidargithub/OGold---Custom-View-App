@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Row, Col } from '@zendeskgarden/react-grid';
 import { Field, Label, Select } from '@zendeskgarden/react-forms';
 import { Button } from '@zendeskgarden/react-buttons';

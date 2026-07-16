@@ -55,8 +55,11 @@ const StyledHeaderCell = styled(HeaderCell)`
     if (props.columnId === 'created_at' || props.columnId === 'updated_at') return '180px';
     return '160px';
   }};
+  max-width: 400px;
   padding: 12px 16px !important;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -71,6 +74,7 @@ const StyledCell = styled(Cell)`
     if (props.columnId === 'created_at' || props.columnId === 'updated_at') return '180px';
     return '160px';
   }};
+  max-width: 400px;
   padding: 12px 16px !important;
   white-space: nowrap;
   text-overflow: ellipsis;

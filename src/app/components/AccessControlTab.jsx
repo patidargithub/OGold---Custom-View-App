@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Row, Col } from '@zendeskgarden/react-grid';
-import { Field, Label, Hint } from '@zendeskgarden/react-forms';
+import { Field } from '@zendeskgarden/react-forms';
 import { Tag } from '@zendeskgarden/react-tags';
 import { Button } from '@zendeskgarden/react-buttons';
 import styled, { keyframes } from 'styled-components';
@@ -281,15 +281,15 @@ function MultiSelectField({
 
   const getOptionLabel = (val) => {
     if (val === adminRoleId) return 'Admin';
-    const opt = options.find(o => o.id === val);
+    const opt = options.find(o => o.id.toString() === val.toString());
     return opt ? opt.name : val;
   };
 
   const filteredOptions = options.filter(opt =>
-    opt.id !== adminRoleId &&
+    opt.id.toString() !== adminRoleId.toString() &&
     opt.name.toLowerCase() !== 'admin' &&
     opt.name.toLowerCase() !== 'administrator' &&
-    !values.includes(opt.id) &&
+    !values.map(v => v.toString()).includes(opt.id.toString()) &&
     opt.name.toLowerCase().includes(search.toLowerCase())
   );
 

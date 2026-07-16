@@ -82,6 +82,9 @@ export default function NavBarApp() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [lastPageSize, setLastPageSize] = useState(25);
+  const [lastSortField, setLastSortField] = useState('created_at');
+  const [lastSortDirection, setLastSortDirection] = useState('desc');
 
   // Metadata caches
   const [fields, setFields] = useState([]);
@@ -203,15 +206,18 @@ export default function NavBarApp() {
           const size = parseInt(settings.page_size, 10);
           if (!isNaN(size)) {
             setPageSize(size);
+            setLastPageSize(size);
           }
         }
 
         // Load default sort field and direction
         if (settings.default_sort_field) {
           setSortField(settings.default_sort_field);
+          setLastSortField(settings.default_sort_field);
         }
         if (settings.default_sort_direction) {
           setSortDirection(settings.default_sort_direction);
+          setLastSortDirection(settings.default_sort_direction);
         }
 
         // Fetch all fields
@@ -444,6 +450,10 @@ export default function NavBarApp() {
       setTotalCount(result.count);
       setCurrentPage(page);
 
+      setLastPageSize(pageSize);
+      setLastSortField(activeSortField);
+      setLastSortDirection(activeSortDir);
+
       // Auto route to results tab on search submit
       setActiveTab('tickets');
     } catch (err) {
@@ -516,8 +526,11 @@ export default function NavBarApp() {
         text: 'App settings successfully saved and applied to all agents.'
       });
 
-      // Re-trigger search to update table view with new page size and default sort
-      await runTicketSearch(1);
+      // Re-trigger search ONLY if sorting parameters or page size changed (skipping counts re-fetch)
+      const needsSearch = (pageSize !== lastPageSize) || (sortField !== lastSortField) || (sortDirection !== lastSortDirection);
+      if (needsSearch) {
+        await runTicketSearch(1, null, null, null, true);
+      }
       setActiveTab('tickets');
     } catch (err) {
       console.error('Failed to update app settings:', err);
@@ -525,8 +538,11 @@ export default function NavBarApp() {
         type: 'error',
         text: `Failed to save settings: ${err.message || 'Admins only.'}`
       });
-      // Re-trigger search locally anyway so the user can see changes in current tab
-      runTicketSearch(1);
+      // Re-trigger search locally only if sort/page parameters were changed (skipping counts re-fetch)
+      const needsSearch = (pageSize !== lastPageSize) || (sortField !== lastSortField) || (sortDirection !== lastSortDirection);
+      if (needsSearch) {
+        runTicketSearch(1, null, null, null, true);
+      }
       setActiveTab('tickets');
       throw err;
     } finally {
